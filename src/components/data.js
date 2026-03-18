@@ -1,4 +1,4 @@
-export const mockOrders = [
+export const mockOrders  = [
   {
     id: "ORD-7721",
     customer: "The Portsmouth Bakery",
