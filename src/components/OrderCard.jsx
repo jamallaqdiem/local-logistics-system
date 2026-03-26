@@ -1,6 +1,6 @@
 import { Package, MapPin, Clock, ChevronRight } from "lucide-react";
 
-export const OrderCard = ({ order }) => {
+const OrderCard = ({ order }) => {
   const priorityStyles = {
     high: "bg-red-100 text-red-700 border-red-200",
     normal: "bg-blue-100 text-blue-700 border-blue-200",
@@ -50,3 +50,5 @@ export const OrderCard = ({ order }) => {
     </div>
   );
 };
+
+export default OrderCard;
