@@ -9,6 +9,8 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   // active Tab state.
   const [activeTab, setActiveTab] = useState("all");
+  //priority state
+  const [highPriorityOnly, setHighPriorityOnly] = useState(false);
 
   const filteredOrders = mockOrders.filter((order) => {
     // the ID or customer name match.
@@ -17,8 +19,9 @@ function App() {
       order.id.toLowerCase().includes(searchTerm.toLowerCase());
     // we return true if the tab is all or the status match.
     const matchesTab = activeTab === "all" || order.status === activeTab;
+    const matchPriority = !highPriorityOnly || order.priority === "high";
     // the order must pass both checks.
-    return matchesSearch && matchesTab;
+    return matchesSearch && matchesTab && matchPriority;
   });
 
   return (
@@ -58,6 +61,30 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* The Switch box toggle */}
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-wider ${highPriorityOnly ? "text-red-500" : "text-slate-400"}`}
+        >
+          SHOW High Priority
+        </span>
+
+        {/* The actual Switch */}
+        <button
+          onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${
+            highPriorityOnly ? "bg-red-500" : "bg-slate-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ${
+              highPriorityOnly ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
       {/*Status Filter Row */}
       <div className="flex justify-center border-t border-slate-50 pt-2">
         <StatusFilter
