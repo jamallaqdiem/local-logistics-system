@@ -3,16 +3,39 @@ import { mockOrders } from "@/components/data";
 import OrderCard from "@/components/OrderCard";
 import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
+import OrderModal from "./components/OrderModal";
 
 function App() {
   //searchBar state
   const [searchTerm, setSearchTerm] = useState("");
+
   // active Tab state.
   const [activeTab, setActiveTab] = useState("all");
+
   //priority state
   const [highPriorityOnly, setHighPriorityOnly] = useState(false);
 
-  const filteredOrders = mockOrders.filter((order) => {
+  // a tracker for the order status.
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  //using order state to change data.
+  const [orders, setOrders] = useState(mockOrders);
+
+  //function that will move the order status
+  const promoteOrder = (orderId) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => {
+        if (order.id === orderId) {
+          const newPriority = order.priority === "high" ? "normal" : "high";
+          return { ...order, priority: newPriority };
+        }
+        return order;
+      }),
+    );
+    setSelectedOrder(null);
+  };
+
+  const filteredOrders = orders.filter((order) => {
     // the ID or customer name match.
     const matchesSearch =
       order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -20,12 +43,12 @@ function App() {
     // we return true if the tab is all or the status match.
     const matchesTab = activeTab === "all" || order.status === activeTab;
     const matchPriority = !highPriorityOnly || order.priority === "high";
-    // the order must pass both checks.
+    // the order must pass all checks.
     return matchesSearch && matchesTab && matchPriority;
   });
 
   return (
-    // 1. The main wrapper stays the full height of the screen
+    // 1. The main wrapper
     <div className="h-screen bg-slate-100 flex flex-col">
       {/* 2. HEADER SECTION */}
       <div className="bg-white border-b border-slate-200 px-6 py-3 shadow-sm z-10">
@@ -90,14 +113,20 @@ function App() {
         <StatusFilter
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          orders={mockOrders}
+          orders={orders}
         />
       </div>
       {/* 3. SCROLLABLE LIST SECTION */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-md mx-auto flex flex-col gap-4 pb-10">
           {filteredOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+            <div
+              key={order.id}
+              onClick={() => setSelectedOrder(order)}
+              className="cursor-pointer"
+            >
+              <OrderCard order={order} />
+            </div>
           ))}
 
           {filteredOrders.length === 0 && (
@@ -107,6 +136,12 @@ function App() {
           )}
         </div>
       </div>
+      {/* 4. MODAL LAYER */}
+      <OrderModal
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onUpdatePriority={promoteOrder}
+      />
     </div>
   );
 }
