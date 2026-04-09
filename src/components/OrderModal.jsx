@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-const OrderModal = ({ order, onClose, onUpdatePriority }) => {
+import OrderTimeline from "./OrderTimeline";
+const OrderModal = ({ order, onClose, onUpdatePriority, onAdvanceStatus }) => {
   //A use effect that listen and  close the modal using Escape
   useEffect(() => {
     const handleEsc = (e) => {
@@ -46,20 +47,35 @@ const OrderModal = ({ order, onClose, onUpdatePriority }) => {
             </label>
             <p className="text-slate-600">{order.address}</p>
           </div>
+          <OrderTimeline currentStatus={order.status} />
 
-          <div className="pt-4 border-t border-slate-50 flex gap-3">
-            <button
-              onClick={() => onUpdatePriority(order.id)}
-              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
-                order.priority === "high"
-                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  : "bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
-            >
-              {order.priority === "high"
-                ? "⬇️ Demote to Normal"
-                : "🔥 Promote to High"}
-            </button>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 pt-4">
+            {order.status !== "delivered" && (
+              <button
+                onClick={() => onAdvanceStatus(order.id)}
+                className="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg"
+              >
+                {order.status === "pending"
+                  ? "🚚 Start Transit"
+                  : "✅ Mark Delivered"}
+              </button>
+            )}
+
+            <div className="pt-4 border-t border-slate-50 flex gap-3">
+              <button
+                onClick={() => onUpdatePriority(order.id)}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
+                  order.priority === "high"
+                    ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                }`}
+              >
+                {order.priority === "high"
+                  ? "⬇️ Demote to Normal"
+                  : "🔥 Promote to High"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

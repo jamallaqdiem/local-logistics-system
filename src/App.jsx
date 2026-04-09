@@ -5,6 +5,7 @@ import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
 import OrderModal from "./components/OrderModal";
 
+const steps = ["pending", "in-transit", "delivered"];
 function App() {
   //searchBar state
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,6 +36,27 @@ function App() {
     setSelectedOrder(null);
   };
 
+  // function that find the current index of an order's status and move it to the next idx
+  const advanceStatus = (orderId) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => {
+        if (order.id === orderId) {
+          // find where we are in the array
+          const currentIndex = steps.indexOf(order.status);
+
+          // Calculate the next step
+          const nextIndex = currentIndex + 1;
+
+          // only update if there is a next step
+          if (nextIndex < steps.length) {
+            return { ...order, status: steps[nextIndex] };
+          }
+        }
+        return order;
+      }),
+    );
+  };
+
   const filteredOrders = orders.filter((order) => {
     // the ID or customer name match.
     const matchesSearch =
@@ -46,6 +68,9 @@ function App() {
     // the order must pass all checks.
     return matchesSearch && matchesTab && matchPriority;
   });
+
+  // find the the live version order from the state
+  const currentOrder = orders.find((o) => o.id === selectedOrder?.id);
 
   return (
     // 1. The main wrapper
@@ -116,7 +141,7 @@ function App() {
           orders={orders}
         />
       </div>
-      {/* 3. SCROLLABLE LIST SECTION */}
+      {/* SCROLLABLE LIST SECTION */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-md mx-auto flex flex-col gap-4 pb-10">
           {filteredOrders.map((order) => (
@@ -138,9 +163,10 @@ function App() {
       </div>
       {/* 4. MODAL LAYER */}
       <OrderModal
-        order={selectedOrder}
+        order={currentOrder}
         onClose={() => setSelectedOrder(null)}
         onUpdatePriority={promoteOrder}
+        onAdvanceStatus={advanceStatus}
       />
     </div>
   );
