@@ -1,6 +1,12 @@
 import { useEffect } from "react";
 import OrderTimeline from "./OrderTimeline";
-const OrderModal = ({ order, onClose, onUpdatePriority, onAdvanceStatus }) => {
+const OrderModal = ({
+  order,
+  onClose,
+  onUpdatePriority,
+  onAdvanceStatus,
+  onCancel,
+}) => {
   //A use effect that listen and  close the modal using Escape
   useEffect(() => {
     const handleEsc = (e) => {
@@ -47,7 +53,10 @@ const OrderModal = ({ order, onClose, onUpdatePriority, onAdvanceStatus }) => {
             </label>
             <p className="text-slate-600">{order.address}</p>
           </div>
-          <OrderTimeline currentStatus={order.status} />
+          <OrderTimeline
+            currentStatus={order.status}
+            isCancelled={order.isCancelled}
+          />
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4">
@@ -76,6 +85,15 @@ const OrderModal = ({ order, onClose, onUpdatePriority, onAdvanceStatus }) => {
                   : "🔥 Promote to High"}
               </button>
             </div>
+            {/* We only show this if status is not delivered and not already cancelled */}
+            {order.status !== "delivered" && order.status !== "cancelled" && (
+              <button
+                onClick={() => onCancel(order.id)}
+                className="w-full mt-2 py-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest"
+              >
+                × Cancel Order
+              </button>
+            )}
           </div>
         </div>
       </div>

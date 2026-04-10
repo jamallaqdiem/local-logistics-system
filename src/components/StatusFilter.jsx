@@ -2,8 +2,18 @@ const StatusFilter = ({ activeTab, onTabChange, orders }) => {
   const tabs = ["all", "pending", "in-transit", "delivered", "cancelled"];
   // get the count of each status.
   const getCount = (tabName) => {
-    if (tabName === "all") return orders.length;
-    return orders.filter((o) => o.status === tabName).length;
+    if (tabName === "all") {
+      // Show total of active orders
+      return orders.length;
+    }
+
+    if (tabName === "cancelled") {
+      // Look for the boolean flag
+      return orders.filter((o) => o.isCancelled).length;
+    }
+
+    // For pending, in-transit, and delivered only if not cancelled
+    return orders.filter((o) => o.status === tabName && !o.isCancelled).length;
   };
 
   return (
