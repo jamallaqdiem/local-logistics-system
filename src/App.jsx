@@ -63,8 +63,14 @@ function App() {
       order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.id.toLowerCase().includes(searchTerm.toLowerCase());
     // we return true if the tab is all or the status match.
-    const matchesTab = activeTab === "all" || order.status === activeTab;
+    const matchesTab =
+      activeTab === "all"
+        ? !order.isCancelled // Show all active orders
+        : activeTab === "cancelled"
+          ? order.isCancelled // Show  orders where isCancelled is true
+          : order.status === activeTab && !order.isCancelled; // Show specific status and not cancelled
     const matchPriority = !highPriorityOnly || order.priority === "high";
+
     // the order must pass all checks.
     return matchesSearch && matchesTab && matchPriority;
   });
@@ -72,65 +78,76 @@ function App() {
   // find the the live version order from the state
   const currentOrder = orders.find((o) => o.id === selectedOrder?.id);
 
+  // calculate the two numbers total, and high priority
+  const totalOrders = orders.length;
+  const highPriorityCount = orders.filter((o) => o.priority === "high").length;
+
+  // This changes an order's status to cancelled
+  const cancelOrder = (orderId) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => {
+        if (order.id === orderId) {
+          return { ...order, isCancelled: true };
+        }
+        return order;
+      }),
+    );
+    setSelectedOrder(null);
+  };
+
   return (
     // 1. The main wrapper
     <div className="h-screen bg-slate-100 flex flex-col">
       {/* 2. HEADER SECTION */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 shadow-sm z-10">
-        <div className="max-w-6xl mx-auto flex items-center  gap-6">
-          {/* Left Side: Count & Title */}
+      <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm z-10">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
+          {/* LEFT SIDE: Brand & Global Stats */}
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-black text-slate-800 tracking-tight whitespace-nowrap">
+            <h1 className="text-xl font-black text-slate-800 tracking-tight">
               Logistics Command
             </h1>
-            <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-              {filteredOrders.length} results found
-            </span>
+
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+              {/* Total Badge */}
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-tight">
+                {totalOrders} Total
+              </span>
+
+              {/* High Priority Badge - Only show if count > 0 */}
+              {highPriorityCount > 0 && (
+                <button
+                  onClick={() => setHighPriorityOnly(!highPriorityOnly)} // This toggles the filter
+                  className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all active:scale-95 uppercase 
+      ${
+        highPriorityOnly
+          ? "bg-red-600 text-white border-red-600 shadow-sm"
+          : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+      }`}
+                >
+                  ⚠️ {highPriorityCount} High Priority
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Center Search Bar  */}
-          <div className="flex-1 max-w-md">
+          {/* RIGHT SIDE: Search & Clear */}
+          <div className="flex items-center gap-3 flex-1 max-w-md">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
-          </div>
 
-          {/* Right Side Clear Button */}
-          <div className="min-w-[100px] flex justify">
-            {(searchTerm || activeTab !== "all") && (
+            {(searchTerm || activeTab !== "all" || highPriorityOnly) && (
               <button
                 onClick={() => {
                   setSearchTerm("");
                   setActiveTab("all");
+                  setHighPriorityOnly(false);
                 }}
-                className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-all active:scale-95"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 whitespace-nowrap"
               >
-                Clear
+                Reset All
               </button>
             )}
           </div>
         </div>
-      </div>
-
-      {/* The Switch box toggle */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-        <span
-          className={`text-[10px] font-bold uppercase tracking-wider ${highPriorityOnly ? "text-red-500" : "text-slate-400"}`}
-        >
-          SHOW High Priority
-        </span>
-
-        {/* The actual Switch */}
-        <button
-          onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-            highPriorityOnly ? "bg-red-500" : "bg-slate-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ${
-              highPriorityOnly ? "translate-x-5" : "translate-x-0.5"
-            }`}
-          />
-        </button>
       </div>
 
       {/*Status Filter Row */}
@@ -167,6 +184,7 @@ function App() {
         onClose={() => setSelectedOrder(null)}
         onUpdatePriority={promoteOrder}
         onAdvanceStatus={advanceStatus}
+        onCancel={cancelOrder}
       />
     </div>
   );
