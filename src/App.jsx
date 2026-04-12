@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { mockOrders } from "@/components/data";
 import OrderCard from "@/components/OrderCard";
 import SearchBar from "./components/SearchBar";
@@ -21,6 +21,16 @@ function App() {
 
   //using order state to change data.
   const [orders, setOrders] = useState(mockOrders);
+  // timer stamp for whole app
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  // update every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   //function that will move the order status
   const promoteOrder = (orderId) => {
@@ -49,7 +59,11 @@ function App() {
 
           // only update if there is a next step
           if (nextIndex < steps.length) {
-            return { ...order, status: steps[nextIndex] };
+            return {
+              ...order,
+              status: steps[nextIndex],
+              lastUpdate: Date.now(),
+            };
           }
         }
         return order;
@@ -87,13 +101,36 @@ function App() {
     setOrders((prevOrders) =>
       prevOrders.map((order) => {
         if (order.id === orderId) {
-          return { ...order, isCancelled: true };
+          return {
+            ...order,
+            isCancelled: true,
+            lastUpdate: Date.now(),
+          };
         }
         return order;
       }),
     );
     setSelectedOrder(null);
   };
+
+  // calculate and check if the system is overloaded
+  const staleCount = orders.filter((order) => {
+    if (order.status === "delivered" || !order.lastUpdate) return false;
+    const diff = Math.floor((currentTime - order.lastUpdate) / 60000);
+    return diff >= 20; // 20min logic as the card
+  }).length;
+
+  // Determine health status
+  const isSystemOverloaded = staleCount > 10;
+
+  // Calculate the success rate.
+  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
+  const cancelledCount = orders.filter((o) => o.isCancelled).length;
+  const totalResolved = deliveredCount + cancelledCount;
+
+  // Success Rate Formula: (Delivered / Total Resolved) * 100
+  const successRate =
+    totalResolved > 0 ? Math.round((deliveredCount / totalResolved) * 100) : 0;
 
   return (
     // 1. The main wrapper
@@ -157,6 +194,40 @@ function App() {
           onTabChange={setActiveTab}
           orders={orders}
         />
+      </div>
+
+      {/* Insights Ribbon */}
+      <div className="bg-slate-50 border-b border-slate-200 py-2 px-6">
+        <div className="max-w-md mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              <span className="text-slate-400">Success Rate</span>
+              <span
+                className={
+                  successRate > 80 ? "text-green-600" : "text-amber-600"
+                }
+              >
+                {successRate}%
+              </span>
+            </div>
+            <div className="h-6 w-px bg-slate-200" />
+            <div className="flex flex-col">
+              <span className="text-slate-400">Resolved</span>
+              <span className="text-slate-700">{totalResolved} Orders</span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[9px] block text-slate-400 uppercase tracking-widest">
+              System Health
+            </span>
+            <span
+              className={`text-[10px] font-bold uppercase ${isSystemOverloaded ? "text-red-500 animate-pulse" : "text-green-500"}`}
+            >
+              {isSystemOverloaded ? "⚠️ Critical" : "Active"}
+            </span>
+          </div>
+        </div>
       </div>
       {/* SCROLLABLE LIST SECTION */}
       <div className="flex-1 overflow-y-auto p-6">
