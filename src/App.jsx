@@ -112,10 +112,6 @@ function App() {
   // find the the live version order from the state
   const currentOrder = orders.find((o) => o.id === selectedOrder?.id);
 
-  // calculate the two numbers total, and high priority
-  const totalOrders = orders.length;
-  const highPriorityCount = orders.filter((o) => o.priority === "high").length;
-
   // This changes an order's status to cancelled
   const cancelOrder = (orderId) => {
     setOrders((prevOrders) =>
@@ -143,14 +139,25 @@ function App() {
   // Determine health status
   const isSystemOverloaded = staleCount > 10;
 
-  // Calculate the success rate.
-  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
-  const cancelledCount = orders.filter((o) => o.isCancelled).length;
-  const totalResolved = deliveredCount + cancelledCount;
+  // Calculate real-time metrics
+  const metrics = {
+    total: orders.length,
+    delivered: orders.filter((o) => o.status === "delivered").length,
+    cancelled: orders.filter((o) => o.status === "cancelled").length,
+    highPriority: orders.filter(
+      (o) => o.priority === "high" && o.status !== "delivered",
+    ).length,
 
-  // Success Rate Formula: (Delivered / Total Resolved) * 100
-  const successRate =
-    totalResolved > 0 ? Math.round((deliveredCount / totalResolved) * 100) : 0;
+    //  subtract cancelled from total so they don't count against the "success" potential
+    successRate:
+      orders.length > 0
+        ? Math.round(
+            (orders.filter((o) => o.status === "delivered").length /
+              orders.length) *
+              100,
+          )
+        : 0,
+  };
 
   return (
     // 1. The main wrapper
@@ -167,21 +174,21 @@ function App() {
             <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
               {/* Total Badge */}
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-tight">
-                {totalOrders} Total
+                {metrics.total} Total
               </span>
 
               {/* High Priority Badge - Only show if count > 0 */}
-              {highPriorityCount > 0 && (
+              {metrics.highPriority > 0 && (
                 <button
                   onClick={() => setHighPriorityOnly(!highPriorityOnly)} // This toggles the filter
                   className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all active:scale-95 uppercase 
-      ${
-        highPriorityOnly
-          ? "bg-red-600 text-white border-red-600 shadow-sm"
-          : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
-      }`}
+                    ${
+                      highPriorityOnly
+                        ? "bg-red-600 text-white border-red-600 shadow-sm"
+                        : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                    }`}
                 >
-                  ⚠️ {highPriorityCount} High Priority
+                  ⚠️ {metrics.highPriority} High Priority
                 </button>
               )}
             </div>
@@ -191,66 +198,89 @@ function App() {
           <div className="flex items-center gap-3 flex-1  justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
 
-            {(searchTerm || activeTab !== "all" || highPriorityOnly) && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setActiveTab("all");
-                  setHighPriorityOnly(false);
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 whitespace-nowrap"
-              >
-                Reset All
-              </button>
-            )}
+            {(searchTerm || activeTab !== "all" || highPriorityOnly) &&
+              filteredOrders.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setActiveTab("all");
+                    setHighPriorityOnly(false);
+                  }}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                >
+                  Reset All
+                </button>
+              )}
           </div>
         </div>
       </div>
 
       {/*Status Filter Row */}
       <div className="w-full bg-white border-b border-slate-200 py-1">
-        <div className="max-w-[1400px] mx-auto px-6">
+        <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between">
           <StatusFilter
             activeTab={activeTab}
             onTabChange={setActiveTab}
             orders={orders}
           />
-        </div>
-      </div>
 
-      {/* Insights Ribbon */}
-      <div className="bg-slate-50 border-b border-slate-200 py-2 px-6">
-        <div className="max-w-[1400px] mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col">
-              <span className="text-slate-400">Success Rate</span>
-              <span
-                className={
-                  successRate > 80 ? "text-green-600" : "text-amber-600"
-                }
-              >
-                {successRate}%
+          {/* Insights Ribbon */}
+          <div className="hidden lg:flex items-center gap-10 text-[11px] font-bold tracking-wider uppercase">
+            {/* Success Rate with Mini Progress Bar */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center w-32">
+                <span className="text-slate-400 text-[9px]">Success Rate</span>
+                <span
+                  className={
+                    metrics.successRate > 70
+                      ? "text-emerald-500"
+                      : "text-amber-500"
+                  }
+                >
+                  {metrics.successRate}%
+                </span>
+              </div>
+              {/* The Progress Bar */}
+              <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-1000 ${metrics.successRate > 70 ? "bg-emerald-500" : "bg-amber-500"}`}
+                  style={{ width: `${metrics.successRate}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Resolved Count */}
+            <div className="flex flex-col border-l border-slate-800 pl-6">
+              <span className="text-slate-400 text-[9px]">Resolved</span>
+              <span className="text-slate-200 mt-1">
+                {metrics.delivered}{" "}
+                <span className="text-slate-500 text-[9px] lowercase">
+                  delivered
+                </span>
               </span>
             </div>
-            <div className="h-6 w-px bg-slate-200" />
-            <div className="flex flex-col">
-              <span className="text-slate-400">Resolved</span>
-              <span className="text-slate-700">{totalResolved} Orders</span>
-            </div>
-          </div>
 
-          <div className="text-right">
-            <span className="text-[9px] block text-slate-400 uppercase tracking-widest">
-              System Health
-            </span>
-            <span
-              className={`text-[10px] font-bold uppercase ${isSystemOverloaded ? "text-red-500 animate-pulse" : "text-green-500"}`}
-            >
-              {isSystemOverloaded ? "⚠️ Critical" : "Active"}
-            </span>
+            {/* System Health with Status Indicator */}
+            <div className="flex flex-col border-l border-slate-800 pl-6">
+              <span className="text-slate-400 text-[9px]">System Health</span>
+              <div className="flex items-center gap-2 mt-1">
+                {/* The Status Dot */}
+                <div
+                  className={`w-2 h-2 rounded-full ${isSystemOverloaded ? "bg-rose-500 animate-ping" : "bg-emerald-500"}`}
+                />
+                <span
+                  className={
+                    isSystemOverloaded ? "text-rose-500" : "text-emerald-500"
+                  }
+                >
+                  {isSystemOverloaded ? "Critical" : "Stable"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
       {/* SCROLLABLE LIST SECTION */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
@@ -295,6 +325,7 @@ function App() {
           )}
         </div>
       </div>
+
       {/* 4. MODAL LAYER */}
       <OrderModal
         order={currentOrder}
