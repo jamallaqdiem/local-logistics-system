@@ -19,8 +19,22 @@ function App() {
   // a tracker for the order status.
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  //using order state to change data.
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState(() => {
+    // We try to get data from localStorage
+    const savedOrders = localStorage.getItem("logistics_orders");
+
+    // If it exists, parse the JSON string back into a JS array
+    if (savedOrders) {
+      try {
+        return JSON.parse(savedOrders);
+      } catch (error) {
+        console.error("Failed to parse saved orders:", error);
+        return mockOrders;
+      }
+    }
+    // Fallback to mockOrders if storage is empty
+    return mockOrders;
+  });
   // timer stamp for whole app
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
@@ -31,6 +45,12 @@ function App() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Runs every time the orders state change.
+  useEffect(() => {
+    // Convert the array to a string to store it into file name logistic...
+    localStorage.setItem("logistics_orders", JSON.stringify(orders));
+  }, [orders]);
 
   //function that will move the order status
   const promoteOrder = (orderId) => {
