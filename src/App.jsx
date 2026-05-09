@@ -137,7 +137,7 @@ function App() {
     <div className="h-screen bg-slate-100 flex flex-col">
       {/* 2. HEADER SECTION */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm z-10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-6">
           {/* LEFT SIDE: Brand & Global Stats */}
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-black text-slate-800 tracking-tight">
@@ -168,7 +168,7 @@ function App() {
           </div>
 
           {/* RIGHT SIDE: Search & Clear */}
-          <div className="flex items-center gap-3 flex-1 max-w-md">
+          <div className="flex items-center gap-3 flex-1  justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
 
             {(searchTerm || activeTab !== "all" || highPriorityOnly) && (
@@ -188,17 +188,19 @@ function App() {
       </div>
 
       {/*Status Filter Row */}
-      <div className="flex justify-center border-t border-slate-50 pt-2">
-        <StatusFilter
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          orders={orders}
-        />
+      <div className="w-full bg-white border-b border-slate-200 py-1">
+        <div className="max-w-[1400px] mx-auto px-6">
+          <StatusFilter
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            orders={orders}
+          />
+        </div>
       </div>
 
       {/* Insights Ribbon */}
       <div className="bg-slate-50 border-b border-slate-200 py-2 px-6">
-        <div className="max-w-md mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        <div className="max-w-[1400px] mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
               <span className="text-slate-400">Success Rate</span>
@@ -231,7 +233,7 @@ function App() {
       </div>
       {/* SCROLLABLE LIST SECTION */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-md mx-auto flex flex-col gap-4 pb-10">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
           {filteredOrders.map((order) => (
             <div
               key={order.id}

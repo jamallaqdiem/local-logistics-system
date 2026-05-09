@@ -17,7 +17,7 @@ const StatusFilter = ({ activeTab, onTabChange, orders }) => {
   };
 
   return (
-    <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+    <div className="flex bg-slate-100 p-1 rounded-xl gap-12 gap-1">
       {tabs.map((tab) => (
         <button
           key={tab}
