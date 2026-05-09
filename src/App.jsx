@@ -265,8 +265,32 @@ function App() {
           ))}
 
           {filteredOrders.length === 0 && (
-            <div className="text-center py-20 text-slate-400 italic">
-              No matching orders found...
+            <div className="col-span-full flex flex-col items-center justify-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-sm transition-all animate-in fade-in zoom-in duration-300">
+              {/* Visual Icon */}
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                <span className="text-3xl text-slate-400">🔍</span>
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
+                No orders found
+              </h3>
+
+              <p className="text-slate-500 text-sm max-w-[280px] text-center mb-8 leading-relaxed">
+                We couldn't find anything matching your search or filters. Try
+                adjusting your criteria.
+              </p>
+
+              {/* The clear Button */}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setActiveTab("all");
+                  setHighPriorityOnly(false);
+                }}
+                className="flex items-center gap-2 bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200"
+              >
+                Clear All Filters
+              </button>
             </div>
           )}
         </div>
