@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { mockOrders } from "@/components/data";
-import OrderCard from "@/components/OrderCard";
+import OrderCard from "./components/OrderCard";
 import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
 import OrderModal from "./components/OrderModal";
@@ -19,22 +18,8 @@ function App() {
   // a tracker for the order status.
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const [orders, setOrders] = useState(() => {
-    // We try to get data from localStorage
-    const savedOrders = localStorage.getItem("logistics_orders");
+  const [orders, setOrders] = useState([]);
 
-    // If it exists, parse the JSON string back into a JS array
-    if (savedOrders) {
-      try {
-        return JSON.parse(savedOrders);
-      } catch (error) {
-        console.error("Failed to parse saved orders:", error);
-        return mockOrders;
-      }
-    }
-    // Fallback to mockOrders if storage is empty
-    return mockOrders;
-  });
   // timer stamp for whole app
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
@@ -48,9 +33,22 @@ function App() {
 
   // Runs every time the orders state change.
   useEffect(() => {
-    // Convert the array to a string to store it into file name logistic...
-    localStorage.setItem("logistics_orders", JSON.stringify(orders));
-  }, [orders]);
+    const getOrders = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/api/orders", {
+          method: "GET",
+        });
+        if (!response)
+          throw new Error(`HTTP error, status: ${response.status}`);
+
+        const data = await response.json();
+        setOrders(data);
+      } catch (error) {
+        console.error("Error fetching data:", error.message);
+      }
+    };
+    getOrders();
+  }, []);
 
   //function that will move the order status
   const promoteOrder = (orderId) => {
