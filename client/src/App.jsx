@@ -4,7 +4,6 @@ import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
 import OrderModal from "./components/OrderModal";
 
-const steps = ["pending", "in-transit", "delivered"];
 function App() {
   //searchBar state
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,50 +49,11 @@ function App() {
     getOrders();
   }, []);
 
-  //function that will move the order status
-  const promoteOrder = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
-        if (order.id === orderId) {
-          const newPriority = order.priority === "high" ? "normal" : "high";
-          return { ...order, priority: newPriority };
-        }
-        return order;
-      }),
-    );
-    setSelectedOrder(null);
-  };
-
-  // function that find the current index of an order's status and move it to the next idx
-  const advanceStatus = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
-        if (order.id === orderId) {
-          // find where we are in the array
-          const currentIndex = steps.indexOf(order.status);
-
-          // Calculate the next step
-          const nextIndex = currentIndex + 1;
-
-          // only update if there is a next step
-          if (nextIndex < steps.length) {
-            return {
-              ...order,
-              status: steps[nextIndex],
-              lastUpdate: Date.now(),
-            };
-          }
-        }
-        return order;
-      }),
-    );
-  };
-
   const filteredOrders = orders.filter((order) => {
     // the ID or customer name match.
     const matchesSearch =
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase());
+      order.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.id?.toLowerCase().includes(searchTerm.toLowerCase());
     // we return true if the tab is all or the status match.
     const matchesTab =
       activeTab === "all"
@@ -110,23 +70,35 @@ function App() {
   // find the the live version order from the state
   const currentOrder = orders.find((o) => o.id === selectedOrder?.id);
 
-  // This changes an order's status to cancelled
-  const cancelOrder = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
-        if (order.id === orderId) {
-          return {
-            ...order,
-            isCancelled: true,
-            lastUpdate: Date.now(),
-          };
-        }
-        return order;
-      }),
-    );
-    setSelectedOrder(null);
-  };
+  const updateOrderState = async (orderId, updates) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/orders/${orderId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Updates can be  isCancelled:true or priority: "high" etc.
+          body: JSON.stringify(updates),
+        },
+      );
 
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
+      const updatedOrder = await response.json();
+
+      // Universal State Sync
+      setOrders((prevOrders) =>
+        prevOrders.map((ord) => (ord.id === orderId ? updatedOrder : ord)),
+      );
+
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error("Update failed:", error.message);
+    }
+  };
   // calculate and check if the system is overloaded
   const staleCount = orders.filter((order) => {
     if (order.status === "delivered" || !order.lastUpdate) return false;
@@ -328,9 +300,28 @@ function App() {
       <OrderModal
         order={currentOrder}
         onClose={() => setSelectedOrder(null)}
-        onUpdatePriority={promoteOrder}
-        onAdvanceStatus={advanceStatus}
-        onCancel={cancelOrder}
+        // one master function for everything
+        onUpdatePriority={() =>
+          updateOrderState(currentOrder.id, {
+            priority: currentOrder.priority === "high" ? "normal" : "high",
+          })
+        }
+        onCancel={() =>
+          updateOrderState(currentOrder.id, { isCancelled: true })
+        }
+        onRestore={() =>
+          updateOrderState(currentOrder.id, { isCancelled: false })
+        }
+        onAdvanceStatus={() => {
+          // logic to find next status
+          const statusMap = {
+            pending: "in-transit",
+            "in-transit": "delivered",
+          };
+          const nextStatus = statusMap[currentOrder.status];
+          if (nextStatus)
+            updateOrderState(currentOrder.id, { status: nextStatus });
+        }}
       />
     </div>
   );
