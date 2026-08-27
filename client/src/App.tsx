@@ -1,124 +1,112 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
+import { api } from "./api/axios";
 import OrderCard from "./components/OrderCard";
 import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
 import OrderModal from "./components/OrderModal";
+import { Order, FilterTab, OrderStatus } from "./types/order";
 
 function App() {
-  //searchBar state
-  const [searchTerm, setSearchTerm] = useState("");
+  // searchBar state
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // active Tab state.
-  const [activeTab, setActiveTab] = useState("all");
+  // active Tab state
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
-  //priority state
-  const [highPriorityOnly, setHighPriorityOnly] = useState(false);
+  // priority state
+  const [highPriorityOnly, setHighPriorityOnly] = useState<boolean>(false);
 
-  // a tracker for the order status.
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  // tracker for selected order
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const [orders, setOrders] = useState([]);
+  // orders array
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  // timer stamp for whole app
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  // timestamp for whole app
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
-  // update every minute
+  // update timestamp every minute
   useEffect(() => {
     const timer = setInterval(() => {
+      console.log("⏰ Timer ticked:", new Date().toLocaleTimeString());
       setCurrentTime(Date.now());
     }, 60000);
+
     return () => clearInterval(timer);
   }, []);
 
-  // Runs every time the orders state change.
+  // Fetch orders from backend API
   useEffect(() => {
     const getOrders = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/orders", {
-          method: "GET",
-        });
-        if (!response)
-          throw new Error(`HTTP error, status: ${response.status}`);
-
-        const data = await response.json();
-        setOrders(data);
+        const response = await api.get<Order[]>("/orders");
+        setOrders(response.data);
       } catch (error) {
-        console.error("Error fetching data:", error.message);
+        if (axios.isAxiosError(error)) {
+          console.error("Error fetching data:", error.message);
+        }
       }
     };
     getOrders();
   }, []);
 
   const filteredOrders = orders.filter((order) => {
-    // the ID or customer name match.
     const matchesSearch =
       order.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.id?.toLowerCase().includes(searchTerm.toLowerCase());
-    // we return true if the tab is all or the status match.
+
+    // Normalize cancellation check to handle both boolean and status string
+    const isOrderCancelled = order.isCancelled || order.status === "cancelled";
+
     const matchesTab =
       activeTab === "all"
-        ? !order.isCancelled // Show all active orders
+        ? !isOrderCancelled
         : activeTab === "cancelled"
-          ? order.isCancelled // Show  orders where isCancelled is true
-          : order.status === activeTab && !order.isCancelled; // Show specific status and not cancelled
+          ? isOrderCancelled
+          : order.status ===
+              (activeTab === "in-transit" ? "in_transit" : activeTab) &&
+            !isOrderCancelled;
+
     const matchPriority = !highPriorityOnly || order.priority === "high";
 
-    // the order must pass all checks.
     return matchesSearch && matchesTab && matchPriority;
   });
 
-  // find the the live version order from the state
-  const currentOrder = orders.find((o) => o.id === selectedOrder?.id);
+  const currentOrder = orders.find((o) => o.id === selectedOrder?.id) || null;
 
-  const updateOrderState = async (orderId, updates) => {
+  const updateOrderState = async (orderId: string, updates: Partial<Order>) => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/orders/${orderId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          // Updates can be  isCancelled:true or priority: "high" etc.
-          body: JSON.stringify(updates),
-        },
-      );
+      const response = await api.patch<Order>(`/orders/${orderId}`, updates);
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-
-      const updatedOrder = await response.json();
-
-      // Universal State Sync
       setOrders((prevOrders) =>
-        prevOrders.map((ord) => (ord.id === orderId ? updatedOrder : ord)),
+        prevOrders.map((ord) => (ord.id === orderId ? response.data : ord)),
       );
 
       setSelectedOrder(null);
     } catch (error) {
-      console.error("Update failed:", error.message);
+      if (axios.isAxiosError(error)) {
+        console.error("Update failed:", error.message);
+      }
     }
   };
-  // calculate and check if the system is overloaded
+
   const staleCount = orders.filter((order) => {
     if (order.status === "delivered" || !order.lastUpdate) return false;
     const diff = Math.floor((currentTime - order.lastUpdate) / 60000);
-    return diff >= 20; // 20min logic as the card
+    return diff >= 20;
   }).length;
 
-  // Determine health status
   const isSystemOverloaded = staleCount > 10;
 
-  // Calculate real-time metrics
   const metrics = {
     total: orders.length,
     delivered: orders.filter((o) => o.status === "delivered").length,
-    cancelled: orders.filter((o) => o.status === "cancelled").length,
+    cancelled: orders.filter((o) => o.isCancelled || o.status === "cancelled")
+      .length,
     highPriority: orders.filter(
       (o) => o.priority === "high" && o.status !== "delivered",
     ).length,
-
-    //  subtract cancelled from total so they don't count against the "success" potential
     successRate:
       orders.length > 0
         ? Math.round(
@@ -130,33 +118,28 @@ function App() {
   };
 
   return (
-    // 1. The main wrapper
     <div className="h-screen bg-slate-100 flex flex-col">
-      {/* 2. HEADER SECTION */}
+      {/* HEADER SECTION */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm z-10">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-6">
-          {/* LEFT SIDE: Brand & Global Stats */}
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-black text-slate-800 tracking-tight">
               Logistics Command
             </h1>
 
             <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-              {/* Total Badge */}
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-tight">
                 {metrics.total} Total
               </span>
 
-              {/* High Priority Badge - Only show if count > 0 */}
               {metrics.highPriority > 0 && (
                 <button
-                  onClick={() => setHighPriorityOnly(!highPriorityOnly)} // This toggles the filter
-                  className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all active:scale-95 uppercase 
-                    ${
-                      highPriorityOnly
-                        ? "bg-red-600 text-white border-red-600 shadow-sm"
-                        : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
-                    }`}
+                  onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all active:scale-95 uppercase ${
+                    highPriorityOnly
+                      ? "bg-red-600 text-white border-red-600 shadow-sm"
+                      : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                  }`}
                 >
                   ⚠️ {metrics.highPriority} High Priority
                 </button>
@@ -164,8 +147,7 @@ function App() {
             </div>
           </div>
 
-          {/* RIGHT SIDE: Search & Clear */}
-          <div className="flex items-center gap-3 flex-1  justify-end">
+          <div className="flex items-center gap-3 flex-1 justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
 
             {(searchTerm || activeTab !== "all" || highPriorityOnly) &&
@@ -185,7 +167,7 @@ function App() {
         </div>
       </div>
 
-      {/*Status Filter Row */}
+      {/* Status Filter Row */}
       <div className="w-full bg-white border-b border-slate-200 py-1">
         <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between">
           <StatusFilter
@@ -196,7 +178,6 @@ function App() {
 
           {/* Insights Ribbon */}
           <div className="hidden lg:flex items-center gap-10 text-[11px] font-bold tracking-wider uppercase">
-            {/* Success Rate with Mini Progress Bar */}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center w-32">
                 <span className="text-slate-400 text-[9px]">Success Rate</span>
@@ -210,16 +191,16 @@ function App() {
                   {metrics.successRate}%
                 </span>
               </div>
-              {/* The Progress Bar */}
               <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-1000 ${metrics.successRate > 70 ? "bg-emerald-500" : "bg-amber-500"}`}
+                  className={`h-full transition-all duration-1000 ${
+                    metrics.successRate > 70 ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
                   style={{ width: `${metrics.successRate}%` }}
                 />
               </div>
             </div>
 
-            {/* Resolved Count */}
             <div className="flex flex-col border-l border-slate-800 pl-6">
               <span className="text-slate-400 text-[9px]">Resolved</span>
               <span className="text-slate-200 mt-1">
@@ -230,13 +211,15 @@ function App() {
               </span>
             </div>
 
-            {/* System Health with Status Indicator */}
             <div className="flex flex-col border-l border-slate-800 pl-6">
               <span className="text-slate-400 text-[9px]">System Health</span>
               <div className="flex items-center gap-2 mt-1">
-                {/* The Status Dot */}
                 <div
-                  className={`w-2 h-2 rounded-full ${isSystemOverloaded ? "bg-rose-500 animate-ping" : "bg-emerald-500"}`}
+                  className={`w-2 h-2 rounded-full ${
+                    isSystemOverloaded
+                      ? "bg-rose-500 animate-ping"
+                      : "bg-emerald-500"
+                  }`}
                 />
                 <span
                   className={
@@ -260,13 +243,12 @@ function App() {
               onClick={() => setSelectedOrder(order)}
               className="cursor-pointer"
             >
-              <OrderCard order={order} />
+              <OrderCard order={order} currentTime={currentTime} />
             </div>
           ))}
 
           {filteredOrders.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-sm transition-all animate-in fade-in zoom-in duration-300">
-              {/* Visual Icon */}
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                 <span className="text-3xl text-slate-400">🔍</span>
               </div>
@@ -280,7 +262,6 @@ function App() {
                 adjusting your criteria.
               </p>
 
-              {/* The clear Button */}
               <button
                 onClick={() => {
                   setSearchTerm("");
@@ -296,31 +277,38 @@ function App() {
         </div>
       </div>
 
-      {/* 4. MODAL LAYER */}
+      {/* MODAL LAYER */}
       <OrderModal
         order={currentOrder}
         onClose={() => setSelectedOrder(null)}
-        // one master function for everything
-        onUpdatePriority={() =>
-          updateOrderState(currentOrder.id, {
-            priority: currentOrder.priority === "high" ? "normal" : "high",
+        onUpdatePriority={(id) =>
+          updateOrderState(id, {
+            priority: currentOrder?.priority === "high" ? "normal" : "high",
+            lastUpdate: Date.now(),
           })
         }
-        onCancel={() =>
-          updateOrderState(currentOrder.id, { isCancelled: true })
+        onCancel={(id) =>
+          updateOrderState(id, {
+            isCancelled: true,
+            status: "cancelled",
+            lastUpdate: Date.now(),
+          })
         }
-        onRestore={() =>
-          updateOrderState(currentOrder.id, { isCancelled: false })
+        onRestore={(id) =>
+          updateOrderState(id, {
+            isCancelled: false,
+            status: "pending",
+            lastUpdate: Date.now(),
+          })
         }
         onAdvanceStatus={() => {
-          // logic to find next status
-          const statusMap = {
-            pending: "in-transit",
-            "in-transit": "delivered",
-          };
-          const nextStatus = statusMap[currentOrder.status];
-          if (nextStatus)
-            updateOrderState(currentOrder.id, { status: nextStatus });
+          if (!currentOrder) return;
+          const nextStatus: OrderStatus =
+            currentOrder.status === "pending" ? "in_transit" : "delivered";
+          updateOrderState(currentOrder.id, {
+            status: nextStatus,
+            lastUpdate: Date.now(),
+          });
         }}
       />
     </div>

@@ -13,13 +13,15 @@ const orders = [
     address: "12 Baker St",
     status: "pending",
     priority: "high",
+    lastUpdate: Date.now() - 1000 * 60 * 25,
   },
   {
     id: "ORD-1002",
     customer: "Portsmouth Pier Coffee",
     address: "88 South Quay",
-    status: "in-transit",
+    status: "in_transit",
     priority: "normal",
+    lastUpdate: Date.now() - 1000 * 60 * 5,
   },
   {
     id: "ORD-1003",
@@ -27,19 +29,21 @@ const orders = [
     address: "44 Garden Lane",
     status: "delivered",
     priority: "normal",
+    lastUpdate: Date.now() - 1000 * 60 * 2,
   },
   {
     id: "ORD-1004",
     customer: "Tech Hub Canteen",
     address: "Level 4, Innovation Square",
     status: "pending",
-    priority: "urgent",
+    priority: "high",
+    lastUpdate: Date.now() - 1000 * 60 * 1,
   },
   {
     id: "ORD-1005",
     customer: "Blue Harbour Bistro",
     address: "19 Marine Parade",
-    status: "in-transit",
+    status: "in_transit",
     priority: "high",
   },
   {
@@ -67,7 +71,7 @@ const orders = [
     id: "ORD-1009",
     customer: "Oceanic Library Café",
     address: "Central Library Wing",
-    status: "in-transit",
+    status: "in_transit",
     priority: "normal",
   },
   {
@@ -75,7 +79,7 @@ const orders = [
     customer: "Railway Station Kiosk",
     address: "Platform 2, Main Terminus",
     status: "pending",
-    priority: "urgent",
+    priority: "high",
   },
 ];
 
