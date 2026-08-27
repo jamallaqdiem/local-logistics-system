@@ -1,5 +1,15 @@
-const OrderTimeline = ({ currentStatus, isCancelled }) => {
-  const steps = ["pending", "in-transit", "delivered"];
+import { OrderStatus } from "../types/order";
+
+interface OrderTimelineProps {
+  currentStatus: OrderStatus;
+  isCancelled?: boolean;
+}
+
+const OrderTimeline = ({
+  currentStatus,
+  isCancelled = false,
+}: OrderTimelineProps) => {
+  const steps: OrderStatus[] = ["pending", "in_transit", "delivered"];
   const currentStepIndx = steps.indexOf(currentStatus);
 
   return (
@@ -10,13 +20,13 @@ const OrderTimeline = ({ currentStatus, isCancelled }) => {
         {steps.map((step, index) => {
           const isStepMatch = currentStatus === step;
 
-          // 1. If cancelled, this dot is "completed" only if it was the stage where it died
-          // 2. Otherwise, we use normal index logic
+          // 1. If cancelled, this dot is "completed" only if it was the stage where it stopped
+          // 2. Otherwise, use normal index logic
           const isCompleted = isCancelled
             ? isStepMatch
             : index <= currentStepIndx;
 
-          // 3. This is the "active" dot
+          // 3. Active dot
           const isCurrent = isStepMatch;
 
           return (
@@ -24,7 +34,6 @@ const OrderTimeline = ({ currentStatus, isCancelled }) => {
               key={step}
               className="relative z-10 flex flex-col items-center gap-3"
             >
-              {" "}
               <div
                 className={`w-4 h-4 rounded-full border-4 transition-all duration-500 ${
                   isCancelled && isCurrent
@@ -43,7 +52,9 @@ const OrderTimeline = ({ currentStatus, isCancelled }) => {
                       : "text-slate-400"
                 }`}
               >
-                {isCancelled && isCurrent ? "Cancelled" : step}
+                {isCancelled && isCurrent
+                  ? "Cancelled"
+                  : step.replace("_", "-")}
               </span>
             </div>
           );

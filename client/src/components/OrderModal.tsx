@@ -1,5 +1,16 @@
 import { useEffect } from "react";
 import OrderTimeline from "./OrderTimeline";
+import { Order } from "../types/order";
+
+interface OrderModalProps {
+  order: Order | null;
+  onClose: () => void;
+  onUpdatePriority: (orderId: string) => void;
+  onCancel: (orderId: string) => void;
+  onRestore: (orderId: string) => void;
+  onAdvanceStatus: () => void;
+}
+
 const OrderModal = ({
   order,
   onClose,
@@ -7,19 +18,20 @@ const OrderModal = ({
   onCancel,
   onRestore,
   onAdvanceStatus,
-}) => {
-  //A use effect that listen and  close the modal using Escape
+}: OrderModalProps) => {
+  // Listen for Escape key to close modal
   useEffect(() => {
-    const handleEsc = (e) => {
+    const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleEsc);
 
-    // Cleanup the listener when the modal closes
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
   if (!order) return null;
+
+  const isCancelled = order.isCancelled || order.status === "cancelled";
 
   return (
     <div
@@ -33,7 +45,10 @@ const OrderModal = ({
         {/* Header */}
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-800">{order.id}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:bg-red-600">
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
             ✕
           </button>
         </div>
@@ -54,21 +69,22 @@ const OrderModal = ({
             </label>
             <p className="text-slate-600">{order.address}</p>
           </div>
+
           <OrderTimeline
             currentStatus={order.status}
-            isCancelled={order.isCancelled}
+            isCancelled={isCancelled}
           />
 
           {/* Action Buttons */}
           <div className="pt-4 border-t border-slate-50">
             {/* CASE 1: ORDER IS CANCELLED */}
-            {order.isCancelled ? (
+            {isCancelled ? (
               <div className="flex flex-col items-center gap-3 py-2">
                 <div className="text-red-500 font-black text-xl tracking-tighter italic border-2 border-red-500 px-4 py-1 rounded-md rotate-[-5deg] opacity-80">
                   CANCELLED
                 </div>
                 <button
-                  onClick={() => onRestore(order.id)} // You can pass false to the same PATCH logic
+                  onClick={() => onRestore(order.id)}
                   className="text-xs text-slate-400 hover:text-blue-500 underline transition-colors"
                 >
                   Mistake? Restore Order
@@ -90,7 +106,7 @@ const OrderModal = ({
                       ? "⬇️ Demote"
                       : "🔥 Promote to High"}
                   </button>
-                  {/*  Advance Status Button  */}
+                  {/* Advance Status Button */}
                   {order.status !== "delivered" && (
                     <button
                       onClick={onAdvanceStatus}
