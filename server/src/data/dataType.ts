@@ -4,6 +4,7 @@ export type OrderPriority = "high" | "normal";
 export interface Order {
   id: string;
   customer: string;
+  phone: string;
   address: string;
   status: OrderStatus;
   priority: OrderPriority;
@@ -17,4 +18,5 @@ export interface UpdateOrderInput {
   priority?: OrderPriority;
   isCancelled?: boolean;
   lastUpdate?: number;
+  phone: string;
 }

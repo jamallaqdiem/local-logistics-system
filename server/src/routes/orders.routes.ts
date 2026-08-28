@@ -11,7 +11,8 @@ router.get("/", async (req: Request, res: Response) => {
     const result = await pool.query<Order>(
       `SELECT 
         id, 
-        customer, 
+        customer,
+        phone,
         address, 
         status, 
         priority, 
@@ -35,7 +36,8 @@ router.get("/:id", async (req: Request, res: Response) => {
     const result = await pool.query<Order>(
       `SELECT 
         id, 
-        customer, 
+        customer,
+        phone, 
         address, 
         status, 
         priority, 
@@ -84,6 +86,10 @@ router.patch("/:id", async (req: Request, res: Response) => {
       fields.push(`last_update = $${queryIndex++}`);
       values.push(updates.lastUpdate);
     }
+    if (updates.phone !== undefined) {
+      fields.push(`phone = $${queryIndex++}`);
+      values.push(updates.phone);
+    }
 
     if (fields.length === 0) {
       return res
@@ -99,6 +105,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       RETURNING 
         id, 
         customer, 
+        phone,
         address, 
         status, 
         priority, 

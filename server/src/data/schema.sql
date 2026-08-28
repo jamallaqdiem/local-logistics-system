@@ -15,6 +15,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS orders (
     id VARCHAR(50) PRIMARY KEY,
     customer VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
     address TEXT NOT NULL,
     status order_status NOT NULL DEFAULT 'pending',
     priority order_priority NOT NULL DEFAULT 'normal',
