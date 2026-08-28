@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Package,
   AlertCircle,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { Order } from "../types/order";
 
@@ -21,6 +23,7 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
       !o.isCancelled && o.status !== "delivered" && o.status !== "cancelled",
   );
 
+  const [showNavMenu, setShowNavMenu] = useState(false);
   // 2. Track manual selection state
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
@@ -55,12 +58,31 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
     );
   }
 
-  // Safe to read address
+  // Safe to read address and phone
   const encodedAddress = encodeURIComponent(currentOrder.address || "");
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+  const customerPhone = currentOrder.phone || "+447000000000";
+
+  // Navigation Options
+  const navLinks = [
+    {
+      name: "Google Maps",
+      url: `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
+      color: "hover:bg-blue-50 text-blue-600",
+    },
+    {
+      name: "Waze",
+      url: `https://waze.com/ul?q=${encodedAddress}&navigate=yes`,
+      color: "hover:bg-cyan-50 text-cyan-600",
+    },
+    {
+      name: "Apple Maps",
+      url: `https://maps.apple.com/?q=${encodedAddress}`,
+      color: "hover:bg-slate-100 text-slate-800",
+    },
+  ];
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4">
+    <div className="max-w-md mx-auto p-4 space-y-4 relative">
       {/* Header Badge */}
       <div className="flex items-center justify-between bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
         <div>
@@ -94,6 +116,9 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           <h3 className="text-xl font-extrabold text-slate-900">
             {currentOrder.customer}
           </h3>
+          <p className="text-xs font-semibold text-slate-500 mt-0.5">
+            {customerPhone}
+          </p>
         </div>
 
         <div>
@@ -110,23 +135,24 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
 
         {/* Quick Actions Bar */}
         <div className="grid grid-cols-2 gap-3 pt-2">
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Modal Trigger for Navigation */}
+          <button
+            type="button"
+            onClick={() => setShowNavMenu(true)}
             className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 text-blue-600 font-bold text-sm rounded-xl hover:bg-blue-100 transition-colors"
           >
             <Navigation size={16} />
             Navigate
-          </a>
-          <button
-            type="button"
-            onClick={() => alert(`Calling customer: ${currentOrder.customer}`)}
+          </button>
+
+          {/* Native Phone Call Link */}
+          <a
+            href={`tel:${customerPhone}`}
             className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors"
           >
             <Phone size={16} />
             Call Customer
-          </button>
+          </a>
         </div>
 
         {/* Priority Warning */}
@@ -151,6 +177,41 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
             : "Complete Delivery"}
         </button>
       </div>
+
+      {/* Navigation App Selector Modal */}
+      {showNavMenu && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="font-bold text-slate-900 text-base">
+                Choose Navigation App
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowNavMenu(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {navLinks.map((app) => (
+                <a
+                  key={app.name}
+                  href={app.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowNavMenu(false)}
+                  className={`flex items-center justify-between p-3 rounded-xl border border-slate-200 font-bold text-sm transition-colors ${app.color}`}
+                >
+                  {app.name}
+                  <ExternalLink size={16} />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Remaining Queue Overview */}
       {queuedOrders.length > 0 && (

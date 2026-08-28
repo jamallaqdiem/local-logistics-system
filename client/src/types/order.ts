@@ -18,6 +18,7 @@ export interface Order {
   id: string;
   customer: string;
   address: string;
+  phone: string;
   status: OrderStatus;
   priority: OrderPriority;
   lastUpdate?: number;
