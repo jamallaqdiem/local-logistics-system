@@ -9,6 +9,7 @@ interface OrderModalProps {
   onCancel: (orderId: string) => void;
   onRestore: (orderId: string) => void;
   onAdvanceStatus: () => void;
+  onRevertStatus: (orderId: string) => void;
 }
 
 const OrderModal = ({
@@ -18,6 +19,7 @@ const OrderModal = ({
   onCancel,
   onRestore,
   onAdvanceStatus,
+  onRevertStatus,
 }: OrderModalProps) => {
   // Listen for Escape key to close modal
   useEffect(() => {
@@ -32,6 +34,7 @@ const OrderModal = ({
   if (!order) return null;
 
   const isCancelled = order.isCancelled || order.status === "cancelled";
+  const isDelivered = order.status === "delivered";
 
   return (
     <div
@@ -77,8 +80,21 @@ const OrderModal = ({
 
           {/* Action Buttons */}
           <div className="pt-4 border-t border-slate-50">
-            {/* CASE 1: ORDER IS CANCELLED */}
-            {isCancelled ? (
+            {/* CASE 1: ORDER IS DELIVERED */}
+            {isDelivered ? (
+              <div className="flex flex-col items-center gap-3 py-2">
+                <div className="text-emerald-600 font-black text-xl tracking-tighter italic border-2 border-emerald-500 px-4 py-1 rounded-md rotate-[-3deg] opacity-90 bg-emerald-50">
+                  ✓ DELIVERED
+                </div>
+                <button
+                  onClick={() => onRevertStatus(order.id)}
+                  className="text-xs text-slate-400 hover:text-blue-500 underline transition-colors"
+                >
+                  Mistake? Revert to In-Transit
+                </button>
+              </div>
+            ) : isCancelled ? (
+              /* CASE 2: ORDER IS CANCELLED */
               <div className="flex flex-col items-center gap-3 py-2">
                 <div className="text-red-500 font-black text-xl tracking-tighter italic border-2 border-red-500 px-4 py-1 rounded-md rotate-[-5deg] opacity-80">
                   CANCELLED
@@ -91,7 +107,7 @@ const OrderModal = ({
                 </button>
               </div>
             ) : (
-              /* CASE 2: ORDER IS ACTIVE */
+              /* CASE 3: ORDER IS ACTIVE (PENDING / IN_TRANSIT) */
               <>
                 <div className="flex gap-3">
                   <button
@@ -106,27 +122,22 @@ const OrderModal = ({
                       ? "⬇️ Demote"
                       : "🔥 Promote to High"}
                   </button>
-                  {/* Advance Status Button */}
-                  {order.status !== "delivered" && (
-                    <button
-                      onClick={onAdvanceStatus}
-                      className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors"
-                    >
-                      {order.status === "pending"
-                        ? "🚚 Start Delivery"
-                        : "✅ Mark Delivered"}
-                    </button>
-                  )}
+                  <button
+                    onClick={onAdvanceStatus}
+                    className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors"
+                  >
+                    {order.status === "pending"
+                      ? "🚚 Start Delivery"
+                      : "✅ Mark Delivered"}
+                  </button>
                 </div>
 
-                {order.status !== "delivered" && (
-                  <button
-                    onClick={() => onCancel(order.id)}
-                    className="w-full mt-2 py-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest"
-                  >
-                    × Cancel Order
-                  </button>
-                )}
+                <button
+                  onClick={() => onCancel(order.id)}
+                  className="w-full mt-2 py-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest"
+                >
+                  × Cancel Order
+                </button>
               </>
             )}
           </div>

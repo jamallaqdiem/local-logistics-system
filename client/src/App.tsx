@@ -340,6 +340,12 @@ function App() {
             lastUpdate: Date.now(),
           });
         }}
+        onRevertStatus={(id) => {
+          handleUpdateOrder(id, {
+            status: "in_transit",
+            lastUpdate: Date.now(),
+          });
+        }}
       />
     </div>
   );

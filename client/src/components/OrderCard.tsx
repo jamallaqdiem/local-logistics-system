@@ -1,4 +1,12 @@
-import { Package, MapPin, Clock, ChevronRight, RefreshCw } from "lucide-react";
+import {
+  Package,
+  MapPin,
+  Clock,
+  ChevronRight,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Order, OrderPriority } from "../types/order";
 
 interface OrderCardProps {
@@ -12,12 +20,17 @@ const OrderCard = ({
   currentTime,
   onUpdatePriority,
 }: OrderCardProps) => {
+  const isDelivered = order.status === "delivered";
+  const isCancelled = order.isCancelled || order.status === "cancelled";
+  const isFinished = isDelivered || isCancelled;
+
   // 1. Calculate relative elapsed time in minutes
   const diffInMinutes = order.lastUpdate
     ? Math.max(0, Math.floor((currentTime - order.lastUpdate) / 60000))
     : 0;
 
-  const isStale = diffInMinutes >= 20 && order.status !== "delivered";
+  // Stale warning applies only to active (non-delivered, non-cancelled) orders
+  const isStale = diffInMinutes >= 20 && !isFinished;
 
   // 2. Format relative time
   const formatTimeAgo = (mins: number): string => {
@@ -33,9 +46,11 @@ const OrderCard = ({
     high: "bg-red-100 text-red-700 border-red-200",
     normal: "bg-blue-100 text-blue-700 border-blue-200",
   };
+
   // Toggle priority state on click
   const handleTogglePriority = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents parent card selection/navigation
+    if (isFinished) return;
     const nextPriority: OrderPriority =
       order.priority === "high" ? "normal" : "high";
     onUpdatePriority(order.id, nextPriority);
@@ -43,12 +58,34 @@ const OrderCard = ({
 
   return (
     <div
-      className={`p-5 rounded-2xl border transition-all cursor-pointer group ${
-        isStale
-          ? "bg-amber-50/50 border-amber-300 shadow-inner"
-          : "bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300"
+      className={`relative overflow-hidden p-5 rounded-2xl border transition-all cursor-pointer group ${
+        isFinished
+          ? "bg-slate-50/80 border-slate-200 opacity-90"
+          : isStale
+            ? "bg-amber-50/50 border-amber-300 shadow-inner"
+            : "bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300"
       }`}
     >
+      {/* DELIVERED STAMP OVERLAY */}
+      {isDelivered && (
+        <div className="absolute top-3 right-3 pointer-events-none select-none z-10">
+          <div className="flex items-center gap-1 border-2 border-emerald-500/40 text-emerald-600 font-black text-[10px] tracking-widest uppercase px-2 py-0.5 rounded rotate-[6deg] bg-emerald-50/80">
+            <CheckCircle2 size={12} />
+            Delivered
+          </div>
+        </div>
+      )}
+
+      {/* CANCELLED STAMP OVERLAY */}
+      {isCancelled && (
+        <div className="absolute top-3 right-3 pointer-events-none select-none z-10">
+          <div className="flex items-center gap-1 border-2 border-red-500/40 text-red-600 font-black text-[10px] tracking-widest uppercase px-2 py-0.5 rounded rotate-[-6deg] bg-red-50/80">
+            <XCircle size={12} />
+            Cancelled
+          </div>
+        </div>
+      )}
+
       {/* Warning Badge for Stale Orders */}
       {isStale && (
         <div className="flex items-center gap-2 mb-3 py-1 px-2 bg-amber-100 rounded-md w-fit">
@@ -68,26 +105,34 @@ const OrderCard = ({
           </span>
         </div>
 
-        {/* Clickable Priority Button */}
-        <button
-          type="button"
-          onClick={handleTogglePriority}
-          title="Click to toggle priority"
-          className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${
-            priorityStyles[order.priority] || priorityStyles.normal
-          }`}
-        >
-          <span>{order.priority}</span>
-          <RefreshCw
-            size={10}
-            className="opacity-60 group-hover:rotate-180 transition-transform duration-300"
-          />
-        </button>
+        {/* Priority Badge - Hidden when delivered or cancelled */}
+        {!isFinished && (
+          <button
+            type="button"
+            onClick={handleTogglePriority}
+            title="Click to toggle priority"
+            className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${
+              priorityStyles[order.priority] || priorityStyles.normal
+            }`}
+          >
+            <span>{order.priority}</span>
+            <RefreshCw
+              size={10}
+              className="opacity-60 group-hover:rotate-180 transition-transform duration-300"
+            />
+          </button>
+        )}
       </div>
 
       {/* Main Info */}
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+        <h3
+          className={`text-lg font-bold transition-colors ${
+            isFinished
+              ? "text-slate-600 line-through decoration-slate-300"
+              : "text-slate-900 group-hover:text-blue-600"
+          }`}
+        >
           {order.customer}
         </h3>
         <div className="flex items-center gap-1.5 text-slate-500 mt-1">
@@ -96,21 +141,35 @@ const OrderCard = ({
         </div>
       </div>
 
-      {/* Footer: Dynamic Time Indicator*/}
+      {/* Footer: Dynamic Time Indicator */}
       <div className="flex justify-between items-center pt-4 border-t border-slate-50">
         <div className="flex items-center gap-1.5">
           <Clock
             size={14}
-            className={isStale ? "text-amber-500" : "text-slate-400"}
+            className={
+              isFinished
+                ? "text-slate-300"
+                : isStale
+                  ? "text-amber-500"
+                  : "text-slate-400"
+            }
           />
           <span
             className={`text-[10px] font-bold ${
-              isStale ? "text-amber-600" : "text-slate-400"
+              isFinished
+                ? "text-slate-400"
+                : isStale
+                  ? "text-amber-600"
+                  : "text-slate-400"
             }`}
           >
-            {isStale
-              ? `STALE: ${formatTimeAgo(diffInMinutes)}`
-              : `Updated: ${formatTimeAgo(diffInMinutes)}`}
+            {isCancelled
+              ? `Cancelled: ${formatTimeAgo(diffInMinutes)}`
+              : isDelivered
+                ? `Completed: ${formatTimeAgo(diffInMinutes)}`
+                : isStale
+                  ? `STALE: ${formatTimeAgo(diffInMinutes)}`
+                  : `Updated: ${formatTimeAgo(diffInMinutes)}`}
           </span>
         </div>
 
