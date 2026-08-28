@@ -1,6 +1,6 @@
 // src/types/order.ts
 export type OrderStatus = "pending" | "in_transit" | "delivered" | "cancelled";
-export type OrderPriority = "high" | "normal" | "low";
+export type OrderPriority = "high" | "normal";
 export type FilterTab =
   | "all"
   | "pending"
