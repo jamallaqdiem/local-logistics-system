@@ -1,12 +1,17 @@
-import { Package, MapPin, Clock, ChevronRight } from "lucide-react";
+import { Package, MapPin, Clock, ChevronRight, RefreshCw } from "lucide-react";
 import { Order, OrderPriority } from "../types/order";
 
 interface OrderCardProps {
   order: Order;
   currentTime: number;
+  onUpdatePriority: (id: string, newPriority: OrderPriority) => void;
 }
 
-const OrderCard = ({ order, currentTime }: OrderCardProps) => {
+const OrderCard = ({
+  order,
+  currentTime,
+  onUpdatePriority,
+}: OrderCardProps) => {
   // 1. Calculate relative elapsed time in minutes
   const diffInMinutes = order.lastUpdate
     ? Math.max(0, Math.floor((currentTime - order.lastUpdate) / 60000))
@@ -28,6 +33,13 @@ const OrderCard = ({ order, currentTime }: OrderCardProps) => {
     high: "bg-red-100 text-red-700 border-red-200",
     normal: "bg-blue-100 text-blue-700 border-blue-200",
   };
+  // Toggle priority state on click
+  const handleTogglePriority = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents parent card selection/navigation
+    const nextPriority: OrderPriority =
+      order.priority === "high" ? "normal" : "high";
+    onUpdatePriority(order.id, nextPriority);
+  };
 
   return (
     <div
@@ -47,7 +59,7 @@ const OrderCard = ({ order, currentTime }: OrderCardProps) => {
         </div>
       )}
 
-      {/* Header: Order ID & Priority Badge */}
+      {/* Header: Order ID & Interactive Priority Toggle Badge */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2 text-slate-500">
           <Package size={16} />
@@ -55,13 +67,22 @@ const OrderCard = ({ order, currentTime }: OrderCardProps) => {
             {order.id}
           </span>
         </div>
-        <span
-          className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+
+        {/* Clickable Priority Button */}
+        <button
+          type="button"
+          onClick={handleTogglePriority}
+          title="Click to toggle priority"
+          className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${
             priorityStyles[order.priority] || priorityStyles.normal
           }`}
         >
-          {order.priority}
-        </span>
+          <span>{order.priority}</span>
+          <RefreshCw
+            size={10}
+            className="opacity-60 group-hover:rotate-180 transition-transform duration-300"
+          />
+        </button>
       </div>
 
       {/* Main Info */}

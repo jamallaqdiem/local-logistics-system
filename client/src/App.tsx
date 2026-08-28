@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { api } from "./api/axios";
 import OrderCard from "./components/OrderCard";
 import SearchBar from "./components/SearchBar";
 import StatusFilter from "./components/StatusFilter";
 import OrderModal from "./components/OrderModal";
-import { Order, FilterTab, OrderStatus } from "./types/order";
+import { Order, FilterTab, OrderStatus, OrderPriority } from "./types/order";
+import { fetchOrders, updateOrder } from "./api/api.orders";
+import { updateOrderPriority } from "./api/api.orderEscalation";
 
 function App() {
   // searchBar state
@@ -36,20 +37,40 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch orders from backend API
+  // Fetch orders using service layer
   useEffect(() => {
-    const getOrders = async () => {
+    const loadOrders = async () => {
       try {
-        const response = await api.get<Order[]>("/orders");
-        setOrders(response.data);
+        const data = await fetchOrders();
+        setOrders(data);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           console.error("Error fetching data:", error.message);
         }
       }
     };
-    getOrders();
+    loadOrders();
   }, []);
+
+  // Handler to push updates to backend via API service
+  const handleUpdateOrder = async (
+    orderId: string,
+    updates: Partial<Order>,
+  ) => {
+    try {
+      const updatedOrder = await updateOrder(orderId, updates);
+
+      setOrders((prevOrders) =>
+        prevOrders.map((ord) => (ord.id === orderId ? updatedOrder : ord)),
+      );
+
+      setSelectedOrder(null);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Update failed:", error.message);
+      }
+    }
+  };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -74,22 +95,6 @@ function App() {
   });
 
   const currentOrder = orders.find((o) => o.id === selectedOrder?.id) || null;
-
-  const updateOrderState = async (orderId: string, updates: Partial<Order>) => {
-    try {
-      const response = await api.patch<Order>(`/orders/${orderId}`, updates);
-
-      setOrders((prevOrders) =>
-        prevOrders.map((ord) => (ord.id === orderId ? response.data : ord)),
-      );
-
-      setSelectedOrder(null);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Update failed:", error.message);
-      }
-    }
-  };
 
   const staleCount = orders.filter((order) => {
     if (order.status === "delivered" || !order.lastUpdate) return false;
@@ -134,7 +139,13 @@ function App() {
 
               {metrics.highPriority > 0 && (
                 <button
-                  onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+                  onClick={() => {
+                    const nextState = !highPriorityOnly;
+                    setHighPriorityOnly(nextState);
+                    if (nextState) {
+                      setActiveTab("all");
+                    }
+                  }}
                   className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all active:scale-95 uppercase ${
                     highPriorityOnly
                       ? "bg-red-600 text-white border-red-600 shadow-sm"
@@ -243,7 +254,20 @@ function App() {
               onClick={() => setSelectedOrder(order)}
               className="cursor-pointer"
             >
-              <OrderCard order={order} currentTime={currentTime} />
+              <OrderCard
+                order={order}
+                currentTime={currentTime}
+                onUpdatePriority={async (id, newPriority) => {
+                  try {
+                    const updated = await updateOrderPriority(id, newPriority);
+                    setOrders((prev) =>
+                      prev.map((o) => (o.id === id ? updated : o)),
+                    );
+                  } catch (error) {
+                    console.error("Failed to update priority:", error);
+                  }
+                }}
+              />
             </div>
           ))}
 
@@ -281,21 +305,27 @@ function App() {
       <OrderModal
         order={currentOrder}
         onClose={() => setSelectedOrder(null)}
-        onUpdatePriority={(id) =>
-          updateOrderState(id, {
-            priority: currentOrder?.priority === "high" ? "normal" : "high",
-            lastUpdate: Date.now(),
-          })
-        }
+        onUpdatePriority={async (id) => {
+          if (!currentOrder) return;
+          const nextPriority: OrderPriority =
+            currentOrder.priority === "high" ? "normal" : "high";
+          try {
+            const updated = await updateOrderPriority(id, nextPriority);
+            setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+            setSelectedOrder(null);
+          } catch (error) {
+            console.error("Failed to update priority:", error);
+          }
+        }}
         onCancel={(id) =>
-          updateOrderState(id, {
+          handleUpdateOrder(id, {
             isCancelled: true,
             status: "cancelled",
             lastUpdate: Date.now(),
           })
         }
         onRestore={(id) =>
-          updateOrderState(id, {
+          handleUpdateOrder(id, {
             isCancelled: false,
             status: "pending",
             lastUpdate: Date.now(),
@@ -305,7 +335,7 @@ function App() {
           if (!currentOrder) return;
           const nextStatus: OrderStatus =
             currentOrder.status === "pending" ? "in_transit" : "delivered";
-          updateOrderState(currentOrder.id, {
+          handleUpdateOrder(currentOrder.id, {
             status: nextStatus,
             lastUpdate: Date.now(),
           });
