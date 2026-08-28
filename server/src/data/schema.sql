@@ -7,7 +7,7 @@ BEGIN
         CREATE TYPE order_status AS ENUM ('pending', 'in_transit', 'delivered', 'cancelled');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_priority') THEN
-        CREATE TYPE order_priority AS ENUM ('low', 'normal', 'high');
+        CREATE TYPE order_priority AS ENUM ('normal', 'high');
     END IF;
 END $$;
 

@@ -27,7 +27,6 @@ const OrderCard = ({ order, currentTime }: OrderCardProps) => {
   const priorityStyles: Record<OrderPriority, string> = {
     high: "bg-red-100 text-red-700 border-red-200",
     normal: "bg-blue-100 text-blue-700 border-blue-200",
-    low: "bg-slate-100 text-slate-700 border-slate-200",
   };
 
   return (

@@ -1,5 +1,5 @@
 export type OrderStatus = "pending" | "in_transit" | "delivered" | "cancelled";
-export type OrderPriority = "high" | "normal" | "low";
+export type OrderPriority = "high" | "normal";
 
 export interface Order {
   id: string;
