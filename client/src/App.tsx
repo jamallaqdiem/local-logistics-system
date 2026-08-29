@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import DispatchPage from "./pages/DispatchPage";
 import DriverPage from "./pages/DriverPage";
+import { CustomerTracking } from "./pages/CustomerTracking";
 
 function App() {
   return (
@@ -13,7 +14,8 @@ function App() {
 
       {/* Driver View */}
       <Route path="/driver" element={<DriverPage />} />
-
+      {/* Customer View */}
+      <Route path="/track/:trackingToken" element={<CustomerTracking />} />
       {/* Catch-all route for invalid URLs */}
       <Route path="*" element={<Navigate to="/dispatch" replace />} />
     </Routes>

@@ -7,10 +7,12 @@ export interface Order {
   phone: string;
   address: string;
   status: OrderStatus;
+  trackingToken: string;
+  estimatedDeliveryTime?: string | null;
   priority: OrderPriority;
   isCancelled: boolean;
   lastUpdate: number;
-  created_at?: string;
+  createdAt?: string;
 }
 
 export interface UpdateOrderInput {
@@ -18,5 +20,6 @@ export interface UpdateOrderInput {
   priority?: OrderPriority;
   isCancelled?: boolean;
   lastUpdate?: number;
-  phone: string;
+  phone?: string;
+  estimatedDeliveryTime?: string;
 }

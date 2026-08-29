@@ -2,8 +2,11 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { pool } from "../data/connection";
 import { Order, UpdateOrderInput } from "../data/dataType";
+import { sendTrackingSMS } from "../services/notifications";
+import { io } from "../app";
 
 const router = Router();
+
 /**
  * @swagger
  * components:
@@ -101,7 +104,7 @@ router.get("/", async (req: Request, res: Response) => {
         priority, 
         is_cancelled AS "isCancelled", 
         last_update AS "lastUpdate", 
-        created_at 
+        created_at AS "createdAt"
        FROM orders 
        ORDER BY created_at DESC`,
     );
@@ -161,7 +164,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         priority, 
         is_cancelled AS "isCancelled", 
         last_update AS "lastUpdate", 
-        created_at 
+        created_at AS "createdAt" 
        FROM orders 
        WHERE id = $1`,
       [id],
@@ -273,6 +276,8 @@ router.patch("/:id", async (req: Request, res: Response) => {
         address, 
         status, 
         priority, 
+        tracking_token AS "trackingToken",
+        estimated_delivery_time AS "estimatedDeliveryTime",
         is_cancelled AS "isCancelled", 
         last_update AS "lastUpdate"
     `;
@@ -283,10 +288,75 @@ router.patch("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    res.status(200).json(result.rows[0]);
+    const updatedOrder = result.rows[0];
+
+    // Trigger SMS notification if status moves to in_transit
+    if (updates.status === "in_transit" && updatedOrder.phone) {
+      sendTrackingSMS(
+        updatedOrder.phone,
+        updatedOrder.trackingToken,
+        updatedOrder.customer,
+      );
+    }
+
+    // Broadcast live update to listening clients via WebSockets
+    if (io) {
+      io.to(updatedOrder.trackingToken).emit("order_updated", updatedOrder);
+    }
+    res.status(200).json(updatedOrder);
   } catch (error) {
     console.error("Error updating order:", error);
     res.status(500).json({ error: "Failed to update order" });
+  }
+});
+
+/**
+ * @swagger
+ * /orders/track/{token}:
+ *   get:
+ *     summary: Get public order details by secure tracking token
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "6fe62b1082f1fcf11bd6c50"
+ *     responses:
+ *       200:
+ *         description: Order details for customer tracking
+ *       404:
+ *         description: Invalid tracking token
+ */
+router.get("/track/:token", async (req: Request, res: Response) => {
+  const { token } = req.params;
+  try {
+    const result = await pool.query<Order>(
+      `SELECT 
+        id, 
+        customer, 
+        address, 
+        status, 
+        priority, 
+        tracking_token AS "trackingToken",
+        estimated_delivery_time AS "estimatedDeliveryTime",
+        is_cancelled AS "isCancelled", 
+        last_update AS "lastUpdate", 
+        created_at AS "createdAt"
+       FROM orders 
+       WHERE tracking_token = $1`,
+      [token],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Invalid tracking token" });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching order by tracking token:", error);
+    res.status(500).json({ error: "Failed to fetch tracking information" });
   }
 });
 
