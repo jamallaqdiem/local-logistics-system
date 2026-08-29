@@ -22,6 +22,18 @@ export interface Order {
   status: OrderStatus;
   priority: OrderPriority;
   lastUpdate?: number;
+  trackingToken: string;
+  estimatedDeliveryTime: string;
   timeline?: TimelineEvent[];
   isCancelled?: boolean;
+}
+
+export interface OrderData {
+  id: string;
+  customer: string;
+  address: string;
+  status: "pending" | "in_transit" | "delivered" | "cancelled";
+  trackingToken: string;
+  estimatedDeliveryTime: string;
+  isCancelled: boolean;
 }

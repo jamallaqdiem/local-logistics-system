@@ -41,7 +41,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/orders", orderRoutes);
 
 // Server Listener
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   startEscalationWorker();
   console.log(`The server is running on port ${PORT}`);
 });
