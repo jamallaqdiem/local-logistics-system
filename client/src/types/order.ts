@@ -37,3 +37,22 @@ export interface OrderData {
   estimatedDeliveryTime: string;
   isCancelled: boolean;
 }
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  postcode: string;
+  address: string;
+}
+
+export interface FormOrderModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (orderData: {
+    customer: string;
+    phone: string;
+    address: string;
+    customerId?: number;
+  }) => void;
+}
