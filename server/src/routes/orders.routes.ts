@@ -3,6 +3,7 @@ import { getOrders } from "../controllers/orders/getOrder.controller";
 import { getOrderById } from "../controllers/orders/getOrderById.controller";
 import { updateOrder } from "../controllers/orders/updateOrder.controller";
 import { trackOrder } from "../controllers/orders/trackOrder.controller";
+import { createOrder } from "../controllers/orders/createOrder.controllers";
 
 const router = Router();
 
@@ -25,6 +26,10 @@ const router = Router();
  *         address:
  *           type: string
  *           example: "105 Fawcett Road, Southsea, PO4 0DB"
+ *         customerId:
+ *           type: integer
+ *           nullable: true
+ *           example: 4
  *         status:
  *           type: string
  *           enum: [pending, in_transit, delivered, cancelled]
@@ -43,6 +48,27 @@ const router = Router();
  *           type: string
  *           format: date-time
  *           example: "2026-08-28T23:44:00.000Z"
+ *     CreateOrderInput:
+ *       type: object
+ *       required: [customer, phone, address]
+ *       properties:
+ *         customer:
+ *           type: string
+ *           example: "Havant Auto Repairs"
+ *         phone:
+ *           type: string
+ *           example: "+447700900111"
+ *         address:
+ *           type: string
+ *           example: "Unit 4, Park Road Ind Est, PO9 1SA"
+ *         customerId:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *         priority:
+ *           type: string
+ *           enum: [normal, high]
+ *           example: "normal"
  *     UpdateOrderInput:
  *       type: object
  *       properties:
@@ -72,5 +98,6 @@ router.get("/", getOrders);
 router.get("/:id", getOrderById);
 router.patch("/:id", updateOrder);
 router.get("/track/:token", trackOrder);
+router.post("/", createOrder);
 
 export default router;

@@ -6,6 +6,7 @@ import { Server } from "socket.io";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger";
 import orderRoutes from "./routes/orders.routes";
+import customerRoutes from "./routes/customer.routes";
 import { startEscalationWorker } from "./services/escalation";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/api/orders", orderRoutes);
+app.use("/api/customers", customerRoutes);
 
 // Server Listener
 server.listen(PORT, () => {

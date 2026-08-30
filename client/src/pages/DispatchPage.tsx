@@ -4,8 +4,9 @@ import OrderCard from "../components/OrderCard";
 import SearchBar from "../components/SearchBar";
 import StatusFilter from "../components/StatusFilter";
 import OrderModal from "../components/OrderModal";
+import { FormOrderModal } from "../components/FormOrderModal";
 import { Order, FilterTab, OrderPriority, OrderStatus } from "../types/order";
-import { fetchOrders, updateOrder } from "../api/api.orders";
+import { fetchOrders, updateOrder, createOrder } from "../api/api.orders";
 import { updateOrderPriority } from "../api/api.orderEscalation";
 
 export default function DispatchPage() {
@@ -13,6 +14,7 @@ export default function DispatchPage() {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [highPriorityOnly, setHighPriorityOnly] = useState<boolean>(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
@@ -134,6 +136,14 @@ export default function DispatchPage() {
 
           <div className="flex items-center gap-3 flex-1 justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
+            {/*   FORM BUTTON */}
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap"
+            >
+              + New Dispatch
+            </button>
 
             {(searchTerm || activeTab !== "all" || highPriorityOnly) &&
               filteredOrders.length > 0 && (
@@ -311,6 +321,21 @@ export default function DispatchPage() {
             lastUpdate: Date.now(),
           })
         }
+      />
+      {/* Form Modal */}
+      <FormOrderModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={async (newOrderData) => {
+          try {
+            // Import and call createOrder from your API file here
+            const created = await createOrder(newOrderData);
+            setOrders((prev) => [created, ...prev]);
+            setIsCreateModalOpen(false);
+          } catch (error) {
+            console.error("Failed to create dispatch order:", error);
+          }
+        }}
       />
     </div>
   );
