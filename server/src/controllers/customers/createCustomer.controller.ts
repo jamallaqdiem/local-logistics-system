@@ -35,7 +35,12 @@ import { CreateCustomerInput, Customer } from "../../data/dataType";
 export const createCustomer = async (req: Request, res: Response) => {
   const { name, phone, postcode, address }: CreateCustomerInput = req.body;
 
-  if (!name || !phone || !postcode || !address) {
+  if (
+    !name?.trim() ||
+    !phone?.trim() ||
+    !postcode?.trim() ||
+    !address?.trim()
+  ) {
     return res
       .status(400)
       .json({ error: "Name, phone, postcode, and address are required" });
