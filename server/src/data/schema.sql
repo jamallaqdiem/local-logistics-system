@@ -12,6 +12,16 @@ BEGIN
     END IF;
 END $$;
 
+-- Customers Table Schema
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    postcode VARCHAR(20) NOT NULL,
+    address TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Orders Table Schema
 CREATE TABLE IF NOT EXISTS orders (
     id VARCHAR(50) PRIMARY KEY, -- Internal Order ID 
@@ -28,5 +38,10 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Add customer_id FK to orders table
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INT REFERENCES customers(id) ON DELETE SET NULL;
+
 -- Index for instant lookup on public customer tracking pages
 CREATE INDEX IF NOT EXISTS idx_orders_tracking_token ON orders(tracking_token);
+-- Index for quick lookups of orders by saved customer
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
