@@ -13,6 +13,7 @@ export interface Order {
   isCancelled: boolean;
   lastUpdate: number;
   createdAt?: string;
+  customerId?: number | null;
 }
 
 export interface UpdateOrderInput {
@@ -22,4 +23,20 @@ export interface UpdateOrderInput {
   lastUpdate?: number;
   phone?: string;
   estimatedDeliveryTime?: string;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  postcode: string;
+  address: string;
+  createdAt?: string;
+}
+
+export interface CreateCustomerInput {
+  name: string;
+  phone: string;
+  postcode: string;
+  address: string;
 }
