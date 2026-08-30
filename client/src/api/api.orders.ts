@@ -15,3 +15,13 @@ export const updateOrder = async (
   const response = await api.patch<Order>(`/orders/${orderId}`, updates);
   return response.data;
 };
+// New orders
+export const createOrder = async (orderData: {
+  customer: string;
+  phone: string;
+  address: string;
+  customerId?: number;
+}): Promise<Order> => {
+  const response = await api.post<Order>("/orders/", orderData);
+  return response.data;
+};

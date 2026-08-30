@@ -1,6 +1,14 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useRef } from "react";
+import { api } from "../api/axios";
 import { Customer, FormOrderModalProps } from "@/types/order";
+
+const INITIAL_FORM_STATE = {
+  name: "",
+  phone: "",
+  postcode: "",
+  address: "",
+  saveForFuture: true,
+};
 
 export const FormOrderModal: React.FC<FormOrderModalProps> = ({
   isOpen,
@@ -10,18 +18,41 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [address, setAddress] = useState("");
-  const [saveForFuture, setSaveForFuture] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // Form State
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
 
-  // Fetch saved B2B customers whenever modal opens
+  // Search filter state for B2B dropdown
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Clear form helper
+  const resetForm = () => {
+    setFormData(INITIAL_FORM_STATE);
+    setSelectedCustomerId("");
+    setCustomerSearch("");
+    setIsDropdownOpen(false);
+    setErrorMsg(null);
+  };
+
+  // Helper to handle form input updates
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  // Fetch saved B2B customers whenever modal opens & reset state when closed
   useEffect(() => {
     if (isOpen) {
-      axios
-        .get<Customer[]>("/api/customers")
+      resetForm();
+      api
+        .get<Customer[]>("/customers")
         .then((response) => {
           setCustomers(Array.isArray(response.data) ? response.data : []);
         })
@@ -29,64 +60,102 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle dropdown selection & auto-fill form fields
-  const handleSelectCustomer = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const custId = e.target.value;
-    setSelectedCustomerId(custId);
+  // Close custom dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    if (!custId) {
-      setName("");
-      setPhone("");
-      setPostcode("");
-      setAddress("");
-      return;
-    }
+  // Filter saved customers based on search input
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      (c.postcode &&
+        c.postcode.toLowerCase().includes(customerSearch.toLowerCase())),
+  );
 
-    const found = customers.find((c) => c.id === Number(custId));
-    if (found) {
-      setName(found.name);
-      setPhone(found.phone);
-      setPostcode(found.postcode || "");
-      setAddress(found.address);
+  const handleSelectCustomer = (customer: Customer | null) => {
+    if (!customer) {
+      resetForm();
+    } else {
+      setSelectedCustomerId(String(customer.id));
+      setCustomerSearch(
+        `${customer.name} ${customer.postcode ? `(${customer.postcode})` : ""}`,
+      );
+      setFormData({
+        name: customer.name,
+        phone: customer.phone,
+        postcode: customer.postcode || "",
+        address: customer.address,
+        saveForFuture: false,
+      });
     }
+    setIsDropdownOpen(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
 
     let finalCustomerId: number | undefined = selectedCustomerId
       ? Number(selectedCustomerId)
       : undefined;
 
-    // Save profile if dispatcher entered a new account manually and checked "Save account profile"
-    if (!selectedCustomerId && saveForFuture) {
+    // 1. Save Customer Account if checked and not selected from dropdown
+    if (!selectedCustomerId && formData.saveForFuture) {
       try {
-        const response = await axios.post<Customer>("/api/customers", {
-          name,
-          phone,
-          postcode,
-          address,
+        const response = await api.post<Customer>("/customers", {
+          name: formData.name,
+          phone: formData.phone,
+          postcode: formData.postcode,
+          address: formData.address,
         });
         if (response.status === 201 || response.status === 200) {
           finalCustomerId = response.data.id;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to save customer profile:", err);
+        setErrorMsg("Failed to save customer profile. Please try again.");
+        setLoading(false);
+        return; // Block order creation if saving account fails
       }
     }
 
-    const fullAddress = postcode ? `${address}, ${postcode}` : address;
+    // 2. Format Address and Dispatch Order
+    const fullAddress = formData.postcode
+      ? `${formData.address}, ${formData.postcode}`
+      : formData.address;
 
-    onSubmit({
-      customer: name,
-      phone,
-      address: fullAddress,
-      customerId: finalCustomerId,
-    });
+    try {
+      await onSubmit({
+        customer: formData.name,
+        phone: formData.phone,
+        address: fullAddress,
+        customerId: finalCustomerId,
+      });
 
-    setLoading(false);
-    onClose();
+      setLoading(false);
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      console.error("Failed to dispatch order:", err);
+      setErrorMsg("Failed to create dispatch order.");
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -94,19 +163,20 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header  */}
+        {/* Header */}
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-800">
             ⚡ New Dispatch Order
           </h2>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             ✕
@@ -115,23 +185,80 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Quick Select B2B Dropdown */}
-          <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+          {errorMsg && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* Searchable B2B Combobox */}
+          <div
+            className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 relative"
+            ref={dropdownRef}
+          >
             <label className="block text-[10px] uppercase font-bold text-blue-900 tracking-wider mb-1">
-              Quick Select Saved B2B Account
+              Quick Search Saved B2B Account
             </label>
-            <select
-              value={selectedCustomerId}
-              onChange={handleSelectCustomer}
-              className="w-full border border-slate-200 p-2.5 rounded-xl bg-white text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">-- Manual Entry / New Customer --</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.postcode ? `(${c.postcode})` : ""}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Type to search saved customer..."
+                value={customerSearch}
+                onFocus={() => setIsDropdownOpen(true)}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setIsDropdownOpen(true);
+                  if (selectedCustomerId) {
+                    setSelectedCustomerId("");
+                  }
+                }}
+                className="w-full border border-slate-200 p-2.5 pr-8 rounded-xl bg-white text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {customerSearch && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectCustomer(null)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Options List */}
+            {isDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto p-1">
+                <button
+                  type="button"
+                  onClick={() => handleSelectCustomer(null)}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-500 hover:bg-slate-100 rounded-lg font-medium"
+                >
+                  -- Manual Entry / Clear Selection --
+                </button>
+
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => handleSelectCustomer(c)}
+                      className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium flex justify-between items-center"
+                    >
+                      <span>{c.name}</span>
+                      {c.postcode && (
+                        <span className="text-xs text-slate-400">
+                          {c.postcode}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-xs text-slate-400">
+                    No matching saved accounts
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -140,9 +267,10 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
             </label>
             <input
               type="text"
+              name="name"
               required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={handleChange}
               placeholder="e.g. Havant Auto Repairs"
               className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -154,9 +282,10 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
             </label>
             <input
               type="tel"
+              name="phone"
               required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              value={formData.phone}
+              onChange={handleChange}
               placeholder="+447700900111"
               className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -169,9 +298,10 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
               </label>
               <input
                 type="text"
+                name="address"
                 required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={formData.address}
+                onChange={handleChange}
                 placeholder="Unit 4, Park Road Ind Est"
                 className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -182,9 +312,10 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
               </label>
               <input
                 type="text"
+                name="postcode"
                 required
-                value={postcode}
-                onChange={(e) => setPostcode(e.target.value)}
+                value={formData.postcode}
+                onChange={handleChange}
                 placeholder="PO9 1SA"
                 className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -195,8 +326,9 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
             <label className="flex items-center gap-2 text-xs text-slate-600 pt-1 cursor-pointer">
               <input
                 type="checkbox"
-                checked={saveForFuture}
-                onChange={(e) => setSaveForFuture(e.target.checked)}
+                name="saveForFuture"
+                checked={formData.saveForFuture}
+                onChange={handleChange}
                 className="rounded text-blue-600 focus:ring-blue-500"
               />
               Save account profile for future fast select
@@ -206,7 +338,7 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
           <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors"
             >
               Cancel
@@ -214,7 +346,7 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/20"
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
             >
               {loading ? "Dispatching..." : "Confirm Dispatch"}
             </button>

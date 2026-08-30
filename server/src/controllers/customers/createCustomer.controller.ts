@@ -49,11 +49,17 @@ export const createCustomer = async (req: Request, res: Response) => {
   try {
     const result = await pool.query<Customer>(
       `INSERT INTO customers (name, phone, postcode, address) 
-       VALUES ($1, $2, $3, $4) 
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (LOWER(name), phone) 
+       DO UPDATE SET 
+         address = EXCLUDED.address, 
+         postcode = EXCLUDED.postcode
        RETURNING id, name, phone, postcode, address, created_at AS "createdAt"`,
-      [name, phone, postcode, address],
+      [name.trim(), phone.trim(), postcode.trim(), address.trim()],
     );
-    res.status(201).json(result.rows[0]);
+
+    // Return 200 OK whether created or updated existing B2B profile
+    res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Error creating customer:", error);
     res.status(500).json({ error: "Failed to save customer account" });
