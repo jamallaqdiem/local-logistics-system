@@ -4,11 +4,13 @@ import { Order, UpdateOrderInput } from "../../data/dataType";
 import { sendTrackingSMS } from "../../services/notifications";
 import { io } from "../../app";
 
+// Expand UpdateOrderInput inline or via type definitions to support dynamic updates
+
 /**
  * @swagger
  * /orders/{id}:
  *   patch:
- *     summary: Update order status, priority, or phone number
+ *     summary: Update order status, priority, price, pickup address, or phone number
  *     tags: [Orders]
  *     parameters:
  *       - in: path
@@ -32,22 +34,10 @@ import { io } from "../../app";
  *               $ref: '#/components/schemas/Order'
  *       400:
  *         description: No valid fields provided for update
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Order not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Database error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateOrder = async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -78,6 +68,14 @@ export const updateOrder = async (req: Request, res: Response) => {
       fields.push(`phone = $${queryIndex++}`);
       values.push(updates.phone);
     }
+    if (updates.pickupAddress !== undefined) {
+      fields.push(`pickup_address = $${queryIndex++}`);
+      values.push(updates.pickupAddress);
+    }
+    if (updates.price !== undefined) {
+      fields.push(`price = $${queryIndex++}`);
+      values.push(updates.price);
+    }
 
     if (fields.length === 0) {
       return res
@@ -95,12 +93,16 @@ export const updateOrder = async (req: Request, res: Response) => {
         customer, 
         phone,
         address, 
+        pickup_address AS "pickupAddress",
+        price::float AS "price",
         status, 
         priority, 
         tracking_token AS "trackingToken",
         estimated_delivery_time AS "estimatedDeliveryTime",
         is_cancelled AS "isCancelled", 
-        last_update AS "lastUpdate"
+        last_update AS "lastUpdate",
+        created_at AS "createdAt",
+        customer_id AS "customerId"
     `;
 
     const result = await pool.query<Order>(queryText, values);
@@ -124,6 +126,7 @@ export const updateOrder = async (req: Request, res: Response) => {
     if (io) {
       io.to(updatedOrder.trackingToken).emit("order_updated", updatedOrder);
     }
+
     res.status(200).json(updatedOrder);
   } catch (error) {
     console.error("Error updating order:", error);

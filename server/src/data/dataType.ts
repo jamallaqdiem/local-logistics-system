@@ -6,6 +6,8 @@ export interface Order {
   customer: string;
   phone: string;
   address: string;
+  pickupAddress?: string | null;
+  price: number;
   status: OrderStatus;
   trackingToken: string;
   estimatedDeliveryTime?: string | null;
@@ -22,6 +24,8 @@ export interface UpdateOrderInput {
   isCancelled?: boolean;
   lastUpdate?: number;
   phone?: string;
+  pickupAddress?: string | null;
+  price: number;
   estimatedDeliveryTime?: string;
 }
 
@@ -31,6 +35,7 @@ export interface Customer {
   phone: string;
   postcode: string;
   address: string;
+  pickupAddress?: string | null;
   createdAt?: string;
 }
 

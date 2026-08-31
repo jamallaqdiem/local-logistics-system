@@ -20,6 +20,13 @@ import { Order } from "../../data/dataType";
  *         address:
  *           type: string
  *           example: "105 Fawcett Road, Southsea, PO4 0DB"
+ *         pickupAddress:
+ *           type: string
+ *           nullable: true
+ *           example: "Unit 4, Park Road Ind Est, PO9 1SA"
+ *         price:
+ *           type: number
+ *           example: 15.50
  *         customerId:
  *           type: integer
  *           nullable: true
@@ -55,6 +62,13 @@ import { Order } from "../../data/dataType";
  *         address:
  *           type: string
  *           example: "Unit 4, Park Road Ind Est, PO9 1SA"
+ *         pickupAddress:
+ *           type: string
+ *           nullable: true
+ *           example: "Portsmouth Central Logistics Hub"
+ *         price:
+ *           type: number
+ *           example: 15.50
  *         customerId:
  *           type: integer
  *           nullable: true
@@ -110,22 +124,40 @@ export const createBatchOrders = async (req: Request, res: Response) => {
     const createdOrders: Order[] = [];
 
     for (const item of orders) {
-      const { customer, phone, address, priority = "medium" } = item;
+      const {
+        customer,
+        phone,
+        address,
+        pickupAddress,
+        price,
+        priority = "normal",
+      } = item;
 
       const result = await client.query<Order>(
-        `INSERT INTO orders (customer, phone, address, priority, status)
-         VALUES ($1, $2, $3, $4, 'pending')
+        `INSERT INTO orders (customer, phone, address, pickup_address, price, priority, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending')
          RETURNING 
            id, 
            customer, 
            phone, 
            address, 
+           pickup_address AS "pickupAddress",
+           price::float AS "price",
            status, 
            priority, 
+           tracking_token AS "trackingToken",
+           estimated_delivery_time AS "estimatedDeliveryTime",
            is_cancelled AS "isCancelled", 
            last_update AS "lastUpdate", 
            created_at AS "createdAt"`,
-        [customer, phone, address, priority],
+        [
+          customer,
+          phone,
+          address,
+          pickupAddress || null,
+          price ?? 0.0,
+          priority,
+        ],
       );
 
       createdOrders.push(result.rows[0]);
