@@ -56,3 +56,14 @@ export interface FormOrderModalProps {
     customerId?: number;
   }) => void;
 }
+export interface BatchOrderInput {
+  customer: string;
+  phone: string;
+  address: string;
+  priority?: "low" | "medium" | "high" | "urgent";
+}
+
+export interface BatchOrderResponse {
+  message: string;
+  data: Order[];
+}

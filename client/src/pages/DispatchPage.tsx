@@ -5,24 +5,43 @@ import SearchBar from "../components/SearchBar";
 import StatusFilter from "../components/StatusFilter";
 import OrderModal from "../components/OrderModal";
 import { FormOrderModal } from "../components/FormOrderModal";
+import { BatchDispatchModal } from "../components/BatchDispatchModal";
 import { Order, FilterTab, OrderPriority, OrderStatus } from "../types/order";
 import { fetchOrders, updateOrder, createOrder } from "../api/api.orders";
 import { updateOrderPriority } from "../api/api.orderEscalation";
 
 export default function DispatchPage() {
+  // Stores the search string typed into the search bar for filtering orders by ID or customer name
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // Tracks the active tab selection (e.g., 'all', 'pending', 'in-transit', 'delivered', 'cancelled')
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+
+  // Toggle filter to display high-priority orders exclusively when enabled
   const [highPriorityOnly, setHighPriorityOnly] = useState<boolean>(false);
+
+  // Holds the currently selected order object to display details in the detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Controls visibility for the manual single order creation modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+
+  // Controls visibility for the batch CSV/Excel file upload modal
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
+
+  // Holds the master list of all dispatch orders retrieved from the backend database
   const [orders, setOrders] = useState<Order[]>([]);
+
+  // Tracks the current timestamp in milliseconds, updated every 60 seconds to recalculate stale order metrics
   const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
+  // Starts a 1-minute interval timer to refresh 'currentTime', driving real-time relative timestamp updates on cards
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
+  // Fetches initial dispatch orders from the API backend on component mount
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -37,6 +56,7 @@ export default function DispatchPage() {
     loadOrders();
   }, []);
 
+  // Sends PATCH updates for an order to the API and updates local state upon success
   const handleUpdateOrder = async (
     orderId: string,
     updates: Partial<Order>,
@@ -53,6 +73,7 @@ export default function DispatchPage() {
     }
   };
 
+  // Filters the main order list based on search term, active status tab, and high-priority toggle
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,15 +95,19 @@ export default function DispatchPage() {
     return matchesSearch && matchesTab && matchPriority;
   });
 
+  // Retrieves the latest version of the currently selected order from the orders state array
   const currentOrder = orders.find((o) => o.id === selectedOrder?.id) || null;
 
+  // Calculates the count of non-delivered orders that have not had updates in over 20 minutes
   const staleCount = orders.filter((order) => {
     if (order.status === "delivered" || !order.lastUpdate) return false;
     return Math.floor((currentTime - order.lastUpdate) / 60000) >= 20;
   }).length;
 
+  // Determines if the system is overloaded based on having more than 10 stale orders
   const isSystemOverloaded = staleCount > 10;
 
+  // Calculates summary metrics for total count, delivered count, high-priority count, and overall success percentage
   const metrics = {
     total: orders.length,
     delivered: orders.filter((o) => o.status === "delivered").length,
@@ -136,7 +161,17 @@ export default function DispatchPage() {
 
           <div className="flex items-center gap-3 flex-1 justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
-            {/*   FORM BUTTON */}
+
+            {/* Triggers the Batch CSV/Excel Upload Modal */}
+            <button
+              type="button"
+              onClick={() => setIsBatchModalOpen(true)}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap flex items-center gap-1.5"
+            >
+              <span>📁</span> Batch Upload
+            </button>
+
+            {/* Triggers the Single Order Creation Modal */}
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
@@ -163,7 +198,7 @@ export default function DispatchPage() {
         </div>
       </div>
 
-      {/* Status Filter Row */}
+      {/* STATUS FILTER ROW */}
       <div className="w-full bg-white border-b border-slate-200 py-1">
         <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between">
           <StatusFilter
@@ -229,7 +264,7 @@ export default function DispatchPage() {
         </div>
       </div>
 
-      {/* SCROLLABLE LIST SECTION */}
+      {/* SCROLLABLE ORDER CARDS GRID */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
           {filteredOrders.map((order) => (
@@ -276,7 +311,7 @@ export default function DispatchPage() {
         </div>
       </div>
 
-      {/* MODAL LAYER */}
+      {/* MODAL: Detailed View & Action Controller for Selected Order */}
       <OrderModal
         order={currentOrder}
         onClose={() => setSelectedOrder(null)}
@@ -322,19 +357,28 @@ export default function DispatchPage() {
           })
         }
       />
-      {/* Form Modal */}
+
+      {/* MODAL: Single Order Creation Form */}
       <FormOrderModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={async (newOrderData) => {
           try {
-            // Import and call createOrder from your API file here
             const created = await createOrder(newOrderData);
             setOrders((prev) => [created, ...prev]);
             setIsCreateModalOpen(false);
           } catch (error) {
             console.error("Failed to create dispatch order:", error);
           }
+        }}
+      />
+
+      {/* MODAL: Bulk CSV / Excel Batch Import */}
+      <BatchDispatchModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        onSuccess={(newOrders: Order[]) => {
+          setOrders((prev) => [...newOrders, ...prev]);
         }}
       />
     </div>
