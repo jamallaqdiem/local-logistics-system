@@ -1,13 +1,6 @@
-import { Router } from "express";
-import { getOrders } from "../controllers/orders/getOrder.controller";
-import { getOrderById } from "../controllers/orders/getOrderById.controller";
-import { updateOrder } from "../controllers/orders/updateOrder.controller";
-import { trackOrder } from "../controllers/orders/trackOrder.controller";
-import { createOrder } from "../controllers/orders/createOrder.controllers";
-import { createBatchOrders } from "../controllers/orders/createBatchOrders.controller";
-
-const router = Router();
-
+import type { Request, Response } from "express";
+import { pool } from "../../data/connection";
+import { Order } from "../../data/dataType";
 /**
  * @swagger
  * components:
@@ -70,6 +63,14 @@ const router = Router();
  *           type: string
  *           enum: [normal, high]
  *           example: "normal"
+ *     BatchOrderInput:
+ *       type: object
+ *       required: [orders]
+ *       properties:
+ *         orders:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/CreateOrderInput'
  *     UpdateOrderInput:
  *       type: object
  *       properties:
@@ -93,13 +94,56 @@ const router = Router();
  *           type: string
  *           example: "Order not found"
  */
+export const createBatchOrders = async (req: Request, res: Response) => {
+  const { orders } = req.body;
 
-// Routes mapped to individual controllers
-router.get("/", getOrders);
-router.get("/:id", getOrderById);
-router.patch("/:id", updateOrder);
-router.get("/track/:token", trackOrder);
-router.post("/", createOrder);
-router.post("/batch", createBatchOrders);
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "Invalid payload: orders array is required." });
+  }
 
-export default router;
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const createdOrders: Order[] = [];
+
+    for (const item of orders) {
+      const { customer, phone, address, priority = "medium" } = item;
+
+      const result = await client.query<Order>(
+        `INSERT INTO orders (customer, phone, address, priority, status)
+         VALUES ($1, $2, $3, $4, 'pending')
+         RETURNING 
+           id, 
+           customer, 
+           phone, 
+           address, 
+           status, 
+           priority, 
+           is_cancelled AS "isCancelled", 
+           last_update AS "lastUpdate", 
+           created_at AS "createdAt"`,
+        [customer, phone, address, priority],
+      );
+
+      createdOrders.push(result.rows[0]);
+    }
+
+    await client.query("COMMIT");
+
+    return res.status(201).json({
+      message: `Successfully created ${createdOrders.length} orders`,
+      data: createdOrders,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Batch Order Database Error:", error);
+    return res
+      .status(500)
+      .json({ error: "Failed to insert batch orders into database" });
+  } finally {
+    client.release();
+  }
+};

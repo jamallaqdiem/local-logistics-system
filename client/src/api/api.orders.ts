@@ -1,5 +1,5 @@
 import { api } from "./axios";
-import { Order } from "../types/order";
+import { Order, BatchOrderInput, BatchOrderResponse } from "../types/order";
 
 // Fetch all orders from backend
 export const fetchOrders = async (): Promise<Order[]> => {
@@ -15,7 +15,7 @@ export const updateOrder = async (
   const response = await api.patch<Order>(`/orders/${orderId}`, updates);
   return response.data;
 };
-// New orders
+// New single order creation
 export const createOrder = async (orderData: {
   customer: string;
   phone: string;
@@ -24,4 +24,14 @@ export const createOrder = async (orderData: {
 }): Promise<Order> => {
   const response = await api.post<Order>("/orders/", orderData);
   return response.data;
+};
+
+// Batch CSV / Excel order creation
+export const createBatchOrders = async (
+  orders: BatchOrderInput[],
+): Promise<Order[]> => {
+  const response = await api.post<BatchOrderResponse>("/orders/batch", {
+    orders,
+  });
+  return response.data.data;
 };
