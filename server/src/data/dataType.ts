@@ -8,6 +8,7 @@ export interface Order {
   address: string;
   pickupAddress?: string | null;
   price: number;
+  pickupPhone?: string | null;
   status: OrderStatus;
   trackingToken: string;
   estimatedDeliveryTime?: string | null;
@@ -26,6 +27,7 @@ export interface UpdateOrderInput {
   phone?: string;
   pickupAddress?: string | null;
   price: number;
+  pickupPhone?: string | null;
   estimatedDeliveryTime?: string;
 }
 

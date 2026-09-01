@@ -10,7 +10,7 @@ import { io } from "../../app";
  * @swagger
  * /orders/{id}:
  *   patch:
- *     summary: Update order status, priority, price, pickup address, or phone number
+ *     summary: Update order status, priority, price, pickup address, pickup address, or phone number
  *     tags: [Orders]
  *     parameters:
  *       - in: path
@@ -72,6 +72,10 @@ export const updateOrder = async (req: Request, res: Response) => {
       fields.push(`pickup_address = $${queryIndex++}`);
       values.push(updates.pickupAddress);
     }
+    if (updates.pickupPhone !== undefined) {
+      fields.push(`pickup_phone = $${queryIndex++}`);
+      values.push(updates.pickupPhone);
+    }
     if (updates.price !== undefined) {
       fields.push(`price = $${queryIndex++}`);
       values.push(updates.price);
@@ -94,6 +98,7 @@ export const updateOrder = async (req: Request, res: Response) => {
         phone,
         address, 
         pickup_address AS "pickupAddress",
+        pickup_phone AS "pickupPhone",
         price::float AS "price",
         status, 
         priority, 

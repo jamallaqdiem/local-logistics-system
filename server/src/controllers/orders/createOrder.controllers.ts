@@ -1,4 +1,3 @@
-// server/src/controllers/orders/createOrder.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 
@@ -29,6 +28,7 @@ export const createOrder = async (req: Request, res: Response) => {
     phone,
     address,
     pickupAddress,
+    pickupPhone,
     price,
     customerId,
     priority = "normal",
@@ -54,11 +54,11 @@ export const createOrder = async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `INSERT INTO orders (
-         id, customer, phone, address, pickup_address, price, customer_id, priority, status
+         id, customer, phone, address, pickup_address, pickup_phone, price, customer_id, priority, status
        )
        VALUES (
          COALESCE($1, 'ORD-' || nextval('orders_id_seq')), 
-         $2, $3, $4, $5, $6, $7, $8, 'pending'
+         $2, $3, $4, $5, $6, $7, $8, $9, 'pending'
        )
        RETURNING 
          id, 
@@ -66,6 +66,7 @@ export const createOrder = async (req: Request, res: Response) => {
          phone, 
          address, 
          pickup_address AS "pickupAddress",
+         pickup_phone AS "pickupPhone",
          price::float AS "price",
          customer_id AS "customerId", 
          priority, 
@@ -81,6 +82,7 @@ export const createOrder = async (req: Request, res: Response) => {
         phone,
         address,
         finalPickupAddress || null,
+        pickupPhone || null,
         price ?? 0.0,
         customerId || null,
         priority,
