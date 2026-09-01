@@ -20,6 +20,8 @@ export const createOrder = async (orderData: {
   customer: string;
   phone: string;
   address: string;
+  pickupAddress?: string;
+  price?: number;
   customerId?: number;
 }): Promise<Order> => {
   const response = await api.post<Order>("/orders/", orderData);

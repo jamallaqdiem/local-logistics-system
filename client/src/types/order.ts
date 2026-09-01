@@ -18,6 +18,8 @@ export interface Order {
   id: string;
   customer: string;
   address: string;
+  pickupAddress?: string | null;
+  price: number;
   phone: string;
   status: OrderStatus;
   priority: OrderPriority;
@@ -26,12 +28,16 @@ export interface Order {
   estimatedDeliveryTime: string;
   timeline?: TimelineEvent[];
   isCancelled?: boolean;
+  customerId?: number | null;
+  createdAt?: string;
 }
 
 export interface OrderData {
   id: string;
   customer: string;
   address: string;
+  pickupAddress?: string | null;
+  price?: number;
   status: "pending" | "in_transit" | "delivered" | "cancelled";
   trackingToken: string;
   estimatedDeliveryTime: string;
@@ -44,6 +50,7 @@ export interface Customer {
   phone: string;
   postcode: string;
   address: string;
+  pickupAddress?: string | null;
 }
 
 export interface FormOrderModalProps {
@@ -53,6 +60,8 @@ export interface FormOrderModalProps {
     customer: string;
     phone: string;
     address: string;
+    pickupAddress?: string;
+    price?: number;
     customerId?: number;
   }) => void;
 }
@@ -60,6 +69,8 @@ export interface BatchOrderInput {
   customer: string;
   phone: string;
   address: string;
+  pickupAddress?: string;
+  price?: number;
   priority?: "low" | "medium" | "high" | "urgent";
 }
 
