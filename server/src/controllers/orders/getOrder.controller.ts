@@ -1,4 +1,3 @@
-// server/src/controllers/orders/getOrder.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { Order } from "../../data/dataType";

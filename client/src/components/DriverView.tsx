@@ -57,11 +57,17 @@ export const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
   const pickupAddress =
     currentOrder.pickupAddress || import.meta.env.VITE_DEFAULT_PICKUP_ADDRESS;
   const deliveryAddress = currentOrder.address || "";
-  const customerPhone = currentOrder.phone || "+447000000000";
+  const pickupPhone =
+    currentOrder.pickupPhone || import.meta.env.VITE_DEFAULT_PICKUP_PHONE;
+  const customerPhone = currentOrder.phone || "N/A";
 
   // Determine active target address based on order lifecycle phase
   const isPendingPickup = currentOrder.status === "pending";
   const activeTargetAddress = isPendingPickup ? pickupAddress : deliveryAddress;
+
+  // Select dynamic call target based on current step
+  const activeCallPhone = isPendingPickup ? pickupPhone : customerPhone;
+  const activeCallLabel = isPendingPickup ? "Call Pickup Hub" : "Call Customer";
 
   const encodedNavAddress = encodeURIComponent(navTargetAddress || "");
   const navLinks = [
@@ -109,12 +115,22 @@ export const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           </span>
         </div>
 
-        {/* Compact Pickup badge in Header when in transit */}
+        {/* Compact Pickup & phone badge in Header when in transit */}
         {!isPendingPickup && (
-          <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 flex items-center gap-1.5 truncate">
-            <Building2 size={13} className="text-amber-400 shrink-0" />
-            <span className="text-slate-400 font-medium shrink-0">Pickup:</span>
-            <span className="truncate">{pickupAddress}</span>
+          <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 truncate">
+              <Building2 size={13} className="text-amber-400 shrink-0" />
+              <span className="text-slate-400 font-medium shrink-0">
+                Pickup:
+              </span>
+              <span className="truncate">{pickupAddress}</span>
+            </div>
+            <a
+              href={`tel:${pickupPhone}`}
+              className="text-amber-400 font-semibold hover:underline flex items-center gap-1 text-[11px] shrink-0 ml-2"
+            >
+              <Phone size={11} /> Call Store
+            </a>
           </div>
         )}
       </div>
@@ -174,12 +190,13 @@ export const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
             {isPendingPickup ? "Navigate Pickup" : "Navigate Dropoff"}
           </button>
 
+          {/* Contextual Call Button */}
           <a
-            href={`tel:${customerPhone}`}
+            href={`tel:${activeCallPhone}`}
             className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors"
           >
             <Phone size={16} />
-            Call Customer
+            {activeCallLabel}
           </a>
         </div>
 

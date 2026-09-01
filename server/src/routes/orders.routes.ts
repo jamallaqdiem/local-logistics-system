@@ -63,7 +63,7 @@ const router = Router();
  *         phone:
  *           type: string
  *           example: "+447700900111"
- *        pickupPhone:
+ *         pickupPhone:
  *           type: string
  *           nullable: true
  *           example: "+447000000000"
@@ -94,7 +94,7 @@ const router = Router();
  *         phone:
  *           type: string
  *           example: "+447700900001"
- *      pickupPhone:
+ *         pickupPhone:
  *           type: string
  *           nullable: true
  *           example: "+447000000000"

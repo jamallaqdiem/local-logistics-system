@@ -1,4 +1,3 @@
-// src/types/order.ts
 export type OrderStatus = "pending" | "in_transit" | "delivered" | "cancelled";
 export type OrderPriority = "high" | "normal";
 export type FilterTab =
@@ -19,6 +18,7 @@ export interface Order {
   customer: string;
   address: string;
   pickupAddress?: string | null;
+  pickupPhone: string | null;
   price: number;
   phone: string;
   status: OrderStatus;
@@ -37,6 +37,7 @@ export interface OrderData {
   customer: string;
   address: string;
   pickupAddress?: string | null;
+  pickupPhone: string | null;
   price?: number;
   status: "pending" | "in_transit" | "delivered" | "cancelled";
   trackingToken: string;
@@ -61,6 +62,7 @@ export interface FormOrderModalProps {
     phone: string;
     address: string;
     pickupAddress?: string;
+    pickupPhone: string | null;
     price?: number;
     customerId?: number;
   }) => void;
@@ -70,6 +72,7 @@ export interface BatchOrderInput {
   phone: string;
   address: string;
   pickupAddress?: string;
+  pickupPhone: string | null;
   price?: number;
   priority?: "low" | "medium" | "high" | "urgent";
 }

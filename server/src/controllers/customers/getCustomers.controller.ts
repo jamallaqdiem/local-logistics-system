@@ -1,4 +1,3 @@
-// server/src/controllers/customers/getCustomers.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { Customer } from "../../data/dataType";
