@@ -8,6 +8,7 @@ import {
   AlertCircle,
   X,
   ExternalLink,
+  Building2,
 } from "lucide-react";
 import { Order } from "../types/order";
 
@@ -16,18 +17,15 @@ interface DriverViewProps {
   onAdvanceStatus: (orderId: string) => void;
 }
 
-const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
-  // 1. Filter for active orders
+export const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
   const activeOrders = orders.filter(
     (o) =>
       !o.isCancelled && o.status !== "delivered" && o.status !== "cancelled",
   );
 
-  const [showNavMenu, setShowNavMenu] = useState(false);
-  // 2. Track manual selection state
+  const [navTargetAddress, setNavTargetAddress] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // 3. Sort orders (High priority first, then in_transit, then pending)
   const sortedOrders = [...activeOrders].sort((a, b) => {
     if (a.priority === "high" && b.priority !== "high") return -1;
     if (a.priority !== "high" && b.priority === "high") return 1;
@@ -36,14 +34,11 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
     return 0;
   });
 
-  // 4. Resolve current active order
   const currentOrder =
     sortedOrders.find((o) => o.id === selectedOrderId) || sortedOrders[0];
 
-  // 5. Build queue of remaining items
   const queuedOrders = sortedOrders.filter((o) => o.id !== currentOrder?.id);
 
-  // ⚠️ SAFETY CHECK: Handle empty orders or loading state BEFORE reading address
   if (!currentOrder) {
     return (
       <div className="max-w-md mx-auto p-6 text-center space-y-4 py-16">
@@ -58,57 +53,74 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
     );
   }
 
-  // Safe to read address and phone
-  const encodedAddress = encodeURIComponent(currentOrder.address || "");
+  // Read pickup address dynamically from order object with dynamic fallback
+  const pickupAddress =
+    currentOrder.pickupAddress || import.meta.env.VITE_DEFAULT_PICKUP_ADDRESS;
+  const deliveryAddress = currentOrder.address || "";
   const customerPhone = currentOrder.phone || "+447000000000";
 
-  // Navigation Options
+  // Determine active target address based on order lifecycle phase
+  const isPendingPickup = currentOrder.status === "pending";
+  const activeTargetAddress = isPendingPickup ? pickupAddress : deliveryAddress;
+
+  const encodedNavAddress = encodeURIComponent(navTargetAddress || "");
   const navLinks = [
     {
       name: "Google Maps",
-      url: `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
+      url: `https://www.google.com/maps/search/?api=1&query=${encodedNavAddress}`,
       color: "hover:bg-blue-50 text-blue-600",
     },
     {
       name: "Waze",
-      url: `https://waze.com/ul?q=${encodedAddress}&navigate=yes`,
+      url: `https://waze.com/ul?q=${encodedNavAddress}&navigate=yes`,
       color: "hover:bg-cyan-50 text-cyan-600",
     },
     {
       name: "Apple Maps",
-      url: `https://maps.apple.com/?q=${encodedAddress}`,
+      url: `https://maps.apple.com/?q=${encodedNavAddress}`,
       color: "hover:bg-slate-100 text-slate-800",
     },
   ];
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-4 relative">
-      {/* Header Badge */}
-      <div className="flex items-center justify-between bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
-        <div>
-          <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
-            Current Route
+      {/* Header Card with Compact Pickup Detail */}
+      <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-lg space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
+              Current Route
+            </span>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Package size={18} className="text-blue-400" />
+              {currentOrder.id}
+            </h2>
+          </div>
+          <span
+            className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
+              currentOrder.status === "in_transit"
+                ? "bg-blue-500 text-white"
+                : "bg-amber-500 text-white"
+            }`}
+          >
+            {currentOrder.status === "in_transit"
+              ? "In Transit"
+              : "Pending Pickup"}
           </span>
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <Package size={18} className="text-blue-400" />
-            {currentOrder.id}
-          </h2>
         </div>
-        <span
-          className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
-            currentOrder.status === "in_transit"
-              ? "bg-blue-500 text-white"
-              : "bg-amber-500 text-white"
-          }`}
-        >
-          {currentOrder.status === "in_transit"
-            ? "In Transit"
-            : "Pending Start"}
-        </span>
+
+        {/* Compact Pickup badge in Header when in transit */}
+        {!isPendingPickup && (
+          <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 flex items-center gap-1.5 truncate">
+            <Building2 size={13} className="text-amber-400 shrink-0" />
+            <span className="text-slate-400 font-medium shrink-0">Pickup:</span>
+            <span className="truncate">{pickupAddress}</span>
+          </div>
+        )}
       </div>
 
       {/* Main Delivery Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div>
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
             Customer
@@ -121,31 +133,47 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           </p>
         </div>
 
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Delivery Address
-          </span>
-          <div className="flex items-start gap-2 mt-1">
-            <MapPin size={18} className="text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-base font-medium text-slate-700 leading-snug">
-              {currentOrder.address}
+        {/* Status-Driven Focus Block */}
+        {isPendingPickup ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase font-extrabold text-amber-800 tracking-wider flex items-center gap-1">
+                <Building2 size={13} className="text-amber-600" /> Current Step:
+                Collect Package
+              </span>
+            </div>
+            <p className="text-base font-bold text-slate-900">
+              {pickupAddress}
+            </p>
+            <p className="text-xs text-slate-500 pt-1">
+              Dropoff: {deliveryAddress}
             </p>
           </div>
-        </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase font-extrabold text-blue-900 tracking-wider flex items-center gap-1">
+                <MapPin size={13} className="text-blue-600" /> Current Step:
+                Deliver to Customer
+              </span>
+            </div>
+            <p className="text-base font-bold text-slate-900">
+              {deliveryAddress}
+            </p>
+          </div>
+        )}
 
-        {/* Quick Actions Bar */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          {/* Modal Trigger for Navigation */}
+        {/* Single Contextual Navigation Button */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
           <button
             type="button"
-            onClick={() => setShowNavMenu(true)}
-            className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 text-blue-600 font-bold text-sm rounded-xl hover:bg-blue-100 transition-colors"
+            onClick={() => setNavTargetAddress(activeTargetAddress)}
+            className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20"
           >
             <Navigation size={16} />
-            Navigate
+            {isPendingPickup ? "Navigate Pickup" : "Navigate Dropoff"}
           </button>
 
-          {/* Native Phone Call Link */}
           <a
             href={`tel:${customerPhone}`}
             className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors"
@@ -155,7 +183,6 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           </a>
         </div>
 
-        {/* Priority Warning */}
         {currentOrder.priority === "high" && (
           <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold">
             <AlertCircle size={16} className="shrink-0 text-red-500" />
@@ -163,7 +190,7 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Status Lifecycle Action */}
         <button
           onClick={() => {
             onAdvanceStatus(currentOrder.id);
@@ -172,23 +199,28 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
           className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-base rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
         >
           <CheckCircle2 size={20} />
-          {currentOrder.status === "pending"
-            ? "Start Delivery"
+          {isPendingPickup
+            ? "Confirm Pickup & Start Route"
             : "Complete Delivery"}
         </button>
       </div>
 
-      {/* Navigation App Selector Modal */}
-      {showNavMenu && (
+      {/* Navigation App Modal */}
+      {Boolean(navTargetAddress) && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-slate-900 text-base">
-                Choose Navigation App
-              </h3>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Choose Navigation App
+                </h3>
+                <p className="text-xs text-slate-500 truncate max-w-[240px]">
+                  {navTargetAddress}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowNavMenu(false)}
+                onClick={() => setNavTargetAddress(null)}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X size={20} />
@@ -201,7 +233,7 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
                   href={app.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setShowNavMenu(false)}
+                  onClick={() => setNavTargetAddress(null)}
                   className={`flex items-center justify-between p-3 rounded-xl border border-slate-200 font-bold text-sm transition-colors ${app.color}`}
                 >
                   {app.name}
@@ -213,7 +245,7 @@ const DriverView = ({ orders, onAdvanceStatus }: DriverViewProps) => {
         </div>
       )}
 
-      {/* Remaining Queue Overview */}
+      {/* Remaining Queue */}
       {queuedOrders.length > 0 && (
         <div className="pt-2 space-y-2">
           <div className="flex justify-between items-center px-1">

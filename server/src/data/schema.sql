@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS customers (
     phone VARCHAR(50) UNIQUE NOT NULL,
     postcode VARCHAR(20) NOT NULL,
     address TEXT NOT NULL,
+    pickup_address TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 -- Composite Unique Constraint: Name (case-insensitive) + Phone
@@ -34,6 +35,8 @@ CREATE TABLE IF NOT EXISTS orders (
     customer VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     address TEXT NOT NULL,
+    pickup_address TEXT, 
+    price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     status order_status NOT NULL DEFAULT 'pending',
     priority order_priority NOT NULL DEFAULT 'normal',
     tracking_token VARCHAR(64) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),
@@ -43,8 +46,6 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add customer_id FK to orders table
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INT REFERENCES customers(id) ON DELETE SET NULL;
 -- Index for instant lookup on public customer tracking pages
 CREATE INDEX IF NOT EXISTS idx_orders_tracking_token ON orders(tracking_token);
 -- Index for quick lookups of orders by saved customer

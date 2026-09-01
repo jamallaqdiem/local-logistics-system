@@ -1,3 +1,4 @@
+// server/src/controllers/customers/createCustomer.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { CreateCustomerInput, Customer } from "../../data/dataType";
@@ -24,6 +25,9 @@ import { CreateCustomerInput, Customer } from "../../data/dataType";
  *                 type: string
  *               address:
  *                 type: string
+ *               pickupAddress:
+ *                 type: string
+ *                 nullable: true
  *     responses:
  *       201:
  *         description: Customer account created successfully
@@ -33,7 +37,13 @@ import { CreateCustomerInput, Customer } from "../../data/dataType";
  *         description: Database error
  */
 export const createCustomer = async (req: Request, res: Response) => {
-  const { name, phone, postcode, address }: CreateCustomerInput = req.body;
+  const {
+    name,
+    phone,
+    postcode,
+    address,
+    pickupAddress,
+  }: CreateCustomerInput & { pickupAddress?: string } = req.body;
 
   if (
     !name?.trim() ||
@@ -48,14 +58,28 @@ export const createCustomer = async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query<Customer>(
-      `INSERT INTO customers (name, phone, postcode, address) 
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO customers (name, phone, postcode, address, pickup_address) 
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (LOWER(name), phone) 
        DO UPDATE SET 
          address = EXCLUDED.address, 
-         postcode = EXCLUDED.postcode
-       RETURNING id, name, phone, postcode, address, created_at AS "createdAt"`,
-      [name.trim(), phone.trim(), postcode.trim(), address.trim()],
+         postcode = EXCLUDED.postcode,
+         pickup_address = COALESCE(EXCLUDED.pickup_address, customers.pickup_address)
+       RETURNING 
+         id, 
+         name, 
+         phone, 
+         postcode, 
+         address, 
+         pickup_address AS "pickupAddress", 
+         created_at AS "createdAt"`,
+      [
+        name.trim(),
+        phone.trim(),
+        postcode.trim(),
+        address.trim(),
+        pickupAddress?.trim() || null,
+      ],
     );
 
     // Return 200 OK whether created or updated existing B2B profile

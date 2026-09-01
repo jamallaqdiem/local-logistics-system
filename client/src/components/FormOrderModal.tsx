@@ -2,11 +2,17 @@ import React, { useEffect, useState, useRef } from "react";
 import { api } from "../api/axios";
 import { Customer, FormOrderModalProps } from "@/types/order";
 
+const DEFAULT_PICKUP_ADDRESS =
+  import.meta.env.VITE_DEFAULT_PICKUP_ADDRESS ||
+  "Portsmouth Express Depot, PO1 1AA";
+
 const INITIAL_FORM_STATE = {
   name: "",
   phone: "",
   postcode: "",
   address: "",
+  pickupAddress: DEFAULT_PICKUP_ADDRESS,
+  price: "",
   saveForFuture: true,
 };
 
@@ -90,13 +96,14 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
       setCustomerSearch(
         `${customer.name} ${customer.postcode ? `(${customer.postcode})` : ""}`,
       );
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         name: customer.name,
         phone: customer.phone,
         postcode: customer.postcode || "",
         address: customer.address,
         saveForFuture: false,
-      });
+      }));
     }
     setIsDropdownOpen(false);
   };
@@ -115,7 +122,7 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
       ? Number(selectedCustomerId)
       : undefined;
 
-    // 1. Save Customer Account if checked and not selected from dropdown
+    //Save Customer Account if checked and not selected from dropdown
     if (!selectedCustomerId && formData.saveForFuture) {
       try {
         const response = await api.post<Customer>("/customers", {
@@ -145,6 +152,8 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
         customer: formData.name,
         phone: formData.phone,
         address: fullAddress,
+        pickupAddress: formData.pickupAddress,
+        price: parseFloat(formData.price) || 0,
         customerId: finalCustomerId,
       });
 
@@ -166,12 +175,12 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">
             ⚡ New Dispatch Order
           </h2>
           <button
@@ -261,6 +270,43 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
             )}
           </div>
 
+          {/* Pickup Address & Price Row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                📍 Pickup Address
+              </label>
+              <input
+                type="text"
+                name="pickupAddress"
+                id="pickupAddress"
+                autoComplete="off"
+                required
+                value={formData.pickupAddress}
+                onChange={handleChange}
+                placeholder="Pickup address..."
+                className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                Price (£)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="price"
+                required
+                value={formData.price}
+                onFocus={(e) => e.target.select()}
+                onChange={handleChange}
+                placeholder="0.00"
+                className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
               Recipient / Business Name
@@ -294,11 +340,13 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
               <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
-                Address
+                Delivery Address
               </label>
               <input
                 type="text"
                 name="address"
+                id="deliveryAddress"
+                autoComplete="street-address"
                 required
                 value={formData.address}
                 onChange={handleChange}

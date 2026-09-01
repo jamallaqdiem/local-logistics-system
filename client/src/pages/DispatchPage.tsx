@@ -6,6 +6,7 @@ import StatusFilter from "../components/StatusFilter";
 import OrderModal from "../components/OrderModal";
 import { FormOrderModal } from "../components/FormOrderModal";
 import { BatchDispatchModal } from "../components/BatchDispatchModal";
+import { ExportInvoicesModal } from "../components/ExportInvoicesModal";
 import { Order, FilterTab, OrderPriority, OrderStatus } from "../types/order";
 import { fetchOrders, updateOrder, createOrder } from "../api/api.orders";
 import { updateOrderPriority } from "../api/api.orderEscalation";
@@ -28,6 +29,9 @@ export default function DispatchPage() {
 
   // Controls visibility for the batch CSV/Excel file upload modal
   const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
+
+  // Controls visibility for the CSV invoice export modal
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Holds the master list of all dispatch orders retrieved from the backend database
   const [orders, setOrders] = useState<Order[]>([]);
@@ -161,6 +165,15 @@ export default function DispatchPage() {
 
           <div className="flex items-center gap-3 flex-1 justify-end">
             <SearchBar onSearch={setSearchTerm} value={searchTerm} />
+
+            {/* Triggers the CSV Invoice Export Modal */}
+            <button
+              type="button"
+              onClick={() => setIsExportModalOpen(true)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap flex items-center gap-1.5"
+            >
+              <span>📊</span> Export CSV
+            </button>
 
             {/* Triggers the Batch CSV/Excel Upload Modal */}
             <button
@@ -380,6 +393,13 @@ export default function DispatchPage() {
         onSuccess={(newOrders: Order[]) => {
           setOrders((prev) => [...newOrders, ...prev]);
         }}
+      />
+
+      {/* MODAL: CSV Invoices Export */}
+      <ExportInvoicesModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        orders={orders}
       />
     </div>
   );

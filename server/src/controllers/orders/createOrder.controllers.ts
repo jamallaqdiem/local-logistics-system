@@ -28,6 +28,8 @@ export const createOrder = async (req: Request, res: Response) => {
     customer,
     phone,
     address,
+    pickupAddress,
+    price,
     customerId,
     priority = "normal",
   } = req.body;
@@ -39,11 +41,50 @@ export const createOrder = async (req: Request, res: Response) => {
   }
 
   try {
+    let finalPickupAddress = pickupAddress;
+
+    // Fall back to customer's default pickup address if not provided in payload
+    if (!finalPickupAddress && customerId) {
+      const customerRes = await pool.query(
+        `SELECT pickup_address FROM customers WHERE id = $1`,
+        [customerId],
+      );
+      finalPickupAddress = customerRes.rows[0]?.pickup_address || null;
+    }
+
     const result = await pool.query(
-      `INSERT INTO orders (id, customer, phone, address, customer_id, priority, status)
-       VALUES (COALESCE($1, 'ORD-' || nextval('orders_id_seq')), $2, $3, $4, $5, $6, 'pending')
-       RETURNING id, customer, phone, address, customer_id AS "customerId", priority, status, created_at AS "createdAt"`,
-      [id || null, customer, phone, address, customerId || null, priority],
+      `INSERT INTO orders (
+         id, customer, phone, address, pickup_address, price, customer_id, priority, status
+       )
+       VALUES (
+         COALESCE($1, 'ORD-' || nextval('orders_id_seq')), 
+         $2, $3, $4, $5, $6, $7, $8, 'pending'
+       )
+       RETURNING 
+         id, 
+         customer, 
+         phone, 
+         address, 
+         pickup_address AS "pickupAddress",
+         price::float AS "price",
+         customer_id AS "customerId", 
+         priority, 
+         status, 
+         tracking_token AS "trackingToken",
+         estimated_delivery_time AS "estimatedDeliveryTime",
+         is_cancelled AS "isCancelled",
+         last_update AS "lastUpdate",
+         created_at AS "createdAt"`,
+      [
+        id || null,
+        customer,
+        phone,
+        address,
+        finalPickupAddress || null,
+        price ?? 0.0,
+        customerId || null,
+        priority,
+      ],
     );
 
     res.status(201).json(result.rows[0]);

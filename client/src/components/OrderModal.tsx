@@ -42,56 +42,95 @@ const OrderModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800">{order.id}</h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            ✕
-          </button>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+              {order.id}
+            </h2>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Order Details
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Price Badge Header */}
+            <span className="text-base font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">
+              £{(order.price || 0).toFixed(2)}
+            </span>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          <div>
-            <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Customer
-            </label>
-            <p className="text-lg font-semibold text-slate-700">
-              {order.customer}
-            </p>
-          </div>
-          {/* Phone Number Display */}
-          {order.phone && (
-            <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                />
-              </svg>
-              <a href={`tel:${order.phone}`} className="hover:underline">
-                {order.phone}
-              </a>
+          {/* Customer & Contact Section */}
+          <div className="flex justify-between items-start">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Customer
+              </label>
+              <p className="text-lg font-bold text-slate-800 leading-tight">
+                {order.customer}
+              </p>
+              {/* Phone Number Display */}
+              {order.phone && (
+                <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                  <svg
+                    className="w-3.5 h-3.5 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                    />
+                  </svg>
+                  <a
+                    href={`tel:${order.phone}`}
+                    className="hover:underline font-medium"
+                  >
+                    {order.phone}
+                  </a>
+                </div>
+              )}
             </div>
-          )}
-          <div>
-            <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Address
-            </label>
-            <p className="text-slate-600">{order.address}</p>
+          </div>
+
+          {/* Locations Container (Pickup & Delivery) */}
+          <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-3">
+            {/* Pickup Location */}
+            <div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                <span>📍</span> Pickup Address
+              </label>
+              <p className="text-xs font-semibold text-slate-700 mt-0.5">
+                {order.pickupAddress || "Portsmouth Express Depot"}
+              </p>
+            </div>
+
+            {/* Divider Dot Line */}
+            <div className="border-t border-dashed border-slate-200"></div>
+
+            {/* Delivery Location */}
+            <div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                <span>🎯</span> Delivery Address
+              </label>
+              <p className="text-xs font-semibold text-slate-700 mt-0.5">
+                {order.address}
+              </p>
+            </div>
           </div>
 
           <OrderTimeline
@@ -100,7 +139,7 @@ const OrderModal = ({
           />
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-slate-50">
+          <div className="pt-4 border-t border-slate-100">
             {/* CASE 1: ORDER IS DELIVERED */}
             {isDelivered ? (
               <div className="flex flex-col items-center gap-3 py-2">

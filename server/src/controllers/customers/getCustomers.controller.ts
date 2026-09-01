@@ -1,3 +1,4 @@
+// server/src/controllers/customers/getCustomers.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { Customer } from "../../data/dataType";
@@ -17,7 +18,14 @@ import { Customer } from "../../data/dataType";
 export const getCustomers = async (req: Request, res: Response) => {
   try {
     const result = await pool.query<Customer>(
-      `SELECT id, name, phone, postcode, address, created_at AS "createdAt" 
+      `SELECT 
+        id, 
+        name, 
+        phone, 
+        postcode, 
+        address, 
+        pickup_address AS "pickupAddress",
+        created_at AS "createdAt" 
        FROM customers 
        ORDER BY name ASC`,
     );
