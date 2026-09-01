@@ -24,6 +24,10 @@ const router = Router();
  *         phone:
  *           type: string
  *           example: "+447700900001"
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *         address:
  *           type: string
  *           example: "105 Fawcett Road, Southsea, PO4 0DB"
@@ -59,6 +63,10 @@ const router = Router();
  *         phone:
  *           type: string
  *           example: "+447700900111"
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *         address:
  *           type: string
  *           example: "Unit 4, Park Road Ind Est, PO9 1SA"
@@ -86,6 +94,10 @@ const router = Router();
  *         phone:
  *           type: string
  *           example: "+447700900001"
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *     ErrorResponse:
  *       type: object
  *       properties:

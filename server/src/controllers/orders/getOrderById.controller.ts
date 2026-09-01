@@ -47,6 +47,7 @@ export const getOrderById = async (req: Request, res: Response) => {
         phone, 
         address, 
         pickup_address AS "pickupAddress",
+        pickup_phone AS "pickupPhone",
         price::float AS "price",
         status, 
         priority, 

@@ -1,4 +1,3 @@
-// server/src/controllers/orders/getOrder.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { Order } from "../../data/dataType";
@@ -34,6 +33,7 @@ export const getOrders = async (req: Request, res: Response) => {
         phone,
         address, 
         pickup_address AS "pickupAddress",
+        pickup_phone AS "pickupPhone",
         price::float AS "price",
         status, 
         priority, 

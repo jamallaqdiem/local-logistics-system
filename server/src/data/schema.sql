@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS orders (
     address TEXT NOT NULL,
     pickup_address TEXT, 
     price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    pickup_phone VARCHAR(20) DEFAULT NULL;
     status order_status NOT NULL DEFAULT 'pending',
     priority order_priority NOT NULL DEFAULT 'normal',
     tracking_token VARCHAR(64) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),

@@ -30,6 +30,7 @@ export const trackOrder = async (req: Request, res: Response) => {
         customer, 
         address, 
         pickup_address AS "pickupAddress",
+        pickup_phone AS "pickupPhone",
         status, 
         priority, 
         tracking_token AS "trackingToken",

@@ -27,6 +27,10 @@ import { Order } from "../../data/dataType";
  *         price:
  *           type: number
  *           example: 15.50
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *         customerId:
  *           type: integer
  *           nullable: true
@@ -69,6 +73,10 @@ import { Order } from "../../data/dataType";
  *         price:
  *           type: number
  *           example: 15.50
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *         customerId:
  *           type: integer
  *           nullable: true
@@ -101,6 +109,10 @@ import { Order } from "../../data/dataType";
  *         phone:
  *           type: string
  *           example: "+447700900001"
+ *         pickupPhone:
+ *           type: string
+ *           nullable: true
+ *           example: "+447000000000"
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -129,19 +141,21 @@ export const createBatchOrders = async (req: Request, res: Response) => {
         phone,
         address,
         pickupAddress,
+        pickupPhone,
         price,
         priority = "normal",
       } = item;
 
       const result = await client.query<Order>(
-        `INSERT INTO orders (customer, phone, address, pickup_address, price, priority, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        `INSERT INTO orders (customer, phone, address, pickup_address, pickup_phone, price, priority, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
          RETURNING 
            id, 
            customer, 
            phone, 
            address, 
            pickup_address AS "pickupAddress",
+           pickup_phone AS "pickupPhone",
            price::float AS "price",
            status, 
            priority, 
@@ -155,6 +169,7 @@ export const createBatchOrders = async (req: Request, res: Response) => {
           phone,
           address,
           pickupAddress || null,
+          pickupPhone || null,
           price ?? 0.0,
           priority,
         ],

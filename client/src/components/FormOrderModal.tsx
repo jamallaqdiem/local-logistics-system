@@ -6,12 +6,16 @@ const DEFAULT_PICKUP_ADDRESS =
   import.meta.env.VITE_DEFAULT_PICKUP_ADDRESS ||
   "Portsmouth Express Depot, PO1 1AA";
 
+const DEFAULT_PICKUP_PHONE =
+  import.meta.env.VITE_DEFAULT_PICKUP_PHONE || "+447000000000";
+
 const INITIAL_FORM_STATE = {
   name: "",
   phone: "",
   postcode: "",
   address: "",
   pickupAddress: DEFAULT_PICKUP_ADDRESS,
+  pickupPhone: DEFAULT_PICKUP_PHONE,
   price: "",
   saveForFuture: true,
 };
@@ -153,6 +157,7 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
         phone: formData.phone,
         address: fullAddress,
         pickupAddress: formData.pickupAddress,
+        pickupPhone: formData.pickupPhone,
         price: parseFloat(formData.price) || 0,
         customerId: finalCustomerId,
       });
@@ -285,6 +290,22 @@ export const FormOrderModal: React.FC<FormOrderModalProps> = ({
                 value={formData.pickupAddress}
                 onChange={handleChange}
                 placeholder="Pickup address..."
+                className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                📞 Pickup Phone
+              </label>
+              <input
+                type="tel"
+                name="pickupPhone"
+                id="pickupPhone"
+                autoComplete="off"
+                required
+                value={formData.pickupPhone}
+                onChange={handleChange}
+                placeholder="+447000000000"
                 className="w-full border border-slate-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
               />
             </div>

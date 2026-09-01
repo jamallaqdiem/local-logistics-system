@@ -1,4 +1,3 @@
-// server/src/controllers/customers/createCustomer.controller.ts
 import type { Request, Response } from "express";
 import { pool } from "../../data/connection";
 import { CreateCustomerInput, Customer } from "../../data/dataType";
